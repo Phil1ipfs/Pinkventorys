@@ -1,0 +1,888 @@
+:root {
+    --primary-color: #F35578;
+    --secondary-color: #6b7280;
+    --background-color: #FEF7FF;
+    --text-color: #1f2937;
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--background-color)!important;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* Navigation */
+/* General styles for the navbar */
+.navbar {
+    background-color: #FEF7FF; /* Adjust as needed */
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Container for navigation items */
+.nav-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px; /* Adjust as needed */
+    margin: 0 auto;
+}
+
+/* Left section of the navbar */
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 20px; /* Space between elements */
+}
+
+/* Brand name */
+.brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #E02D89; /* Adjust as needed */
+    margin: 0;
+}
+
+/* Navigation links container */
+.nav-links {
+    display: flex;
+    gap: 20px; /* Increased space between links */
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 10px; /* Optional: Adds padding around the navigation links */
+}
+
+/* Navigation link */
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Slightly larger gap for better spacing */
+    text-decoration: none;
+    color: #333; /* Default color */
+    font-size: 1rem;
+    padding: 8px 12px; /* Adds padding inside each link */
+    border-radius: 5px; /* Rounded corners for the link */
+    transition: color 0.3s ease; /* Smooth transition for color change */
+}
+
+/* Specific styles for the dashboard and checkout pages
+
+
+/* Search container */
+.search-container1 {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Consistent spacing */
+    margin-left: auto; /* Push search to the right */
+    margin-right: 20px; /* Space between search and right section */
+    position: relative;
+}
+
+/* Search icon */
+.search-icon1 {
+    font-size: 1.4rem; /* Slightly larger for better visibility */
+    color: #555; /* Subtle color */
+    cursor: pointer;
+    transition: color 0.3s ease-in-out;
+}
+
+.search-icon1:hover {
+    color: #333; /* Darker shade on hover */
+}
+
+/* Search input */
+.search-input1 {
+    padding: 10px 14px; /* More comfortable padding */
+    border: 1px solid #bbb; /* Slightly softer border */
+    border-radius: 6px; /* Smoother edges */
+    width: 220px; /* Adjust for better usability */
+    font-size: 1rem; /* Consistent text size */
+    transition: border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.search-input1:focus {
+    border-color: #007bff; /* Highlight on focus */
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    outline: none;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .search-container1 {
+        width: 100%;
+        justify-content: flex-end; /* Aligns properly on smaller screens */
+    }
+
+    .search-input1 {
+        width: 100%;
+        max-width: 180px;
+    }
+}
+
+.suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none; /* Hide by default */
+}
+
+/* Right section of the navbar */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Space between elements */
+}
+
+.sync-status {
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Space between icon and text */
+    font-size: 0.9rem;
+    color: #666; /* Adjust as needed */
+}
+
+.user-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px; /* Space between icon and text */
+}
+
+@media (min-width: 768px) {
+    .sync-status {
+        display: flex;
+    }
+}
+
+.menu-btn, .user-btn {
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--secondary-color);
+    border-radius: 0.375rem;
+    transition: background-color 0.2s;
+}
+
+.menu-btn:hover, .user-btn:hover {
+    background-color: var(--background-color);
+}
+
+@media (min-width: 768px) {
+    .menu-btn {
+        display: none;
+    }
+}
+
+/* Main Content */
+.main-content {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Quick Actions */
+.quick-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .quick-actions {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+.profile {
+    position: relative; /* Needed for absolute positioning of the dropdown */
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: #ffffff;
+    padding: 0.75rem 1.2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+.profile:hover {
+    background-color: #f9fafb;
+    transform: scale(1.03);
+}
+
+.profile-img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ddd;
+    transition: border 0.3s ease-in-out;
+}
+
+.profile:hover .profile-img {
+    border-color: var(--primary-color);
+}
+
+.profile-name {
+    font-weight: 700;
+    color: var(--text-color);
+    font-size: 1rem;
+    white-space: nowrap;
+}
+
+/* 🔽 Dropdown Menu */
+.profile-dropdown {
+    position: absolute;
+    top: 100%; /* Positions below the profile */
+    right: 0;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.3s ease-in-out;
+    min-width: 150px;
+}
+
+.profile-dropdown a {
+    display: block;
+    padding: 10px 15px;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.3s;
+}
+
+.profile-dropdown a:hover {
+    background: #FFA8A7;
+}
+
+/* 🔥 Show dropdown on hover */
+.profile:hover .profile-dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* 🔹 Responsive Adjustments */
+@media (max-width: 768px) {
+    .profile {
+        padding: 0.5rem 1rem;
+        gap: 0.5rem;
+    }
+
+    .profile-img {
+        width: 35px;
+        height: 35px;
+    }
+
+    .profile-name {
+        font-size: 0.875rem;
+    }
+
+    .profile-dropdown {
+        min-width: 130px;
+    }
+
+    .profile-dropdown a {
+        padding: 8px 12px;
+    }
+}
+
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 617px; 
+    gap: 0.75rem;
+    padding: 1.25rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.action-btn.primary {
+    background-color: #F35578;
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background-color: #F35578;
+}
+
+/* .action-btn.secondary {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+}
+
+.action-btn.secondary:hover {
+    background-color: #F35578;
+} */
+.action-btn.secondary {
+    background-color: white; /* Default button background */
+    color: black; /* Default text color */
+    padding: 10px 20px;
+    border:  #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+
+.action-btn.secondary:hover {
+    background-color: #F35578; /* Darker shade on hover */
+    color: #ffffff; /* Text color remains white */
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+@media (min-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.stat-card {
+    background-color: white;
+    padding: 1.25rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+}
+
+/* Hover Effect */
+.stat-card:hover {
+    transform: translateY(-5px); /* Lifts the card slightly */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+    background-color: #f9fafb; /* Light background change */
+}
+
+/* Stat Card Header */
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-header h3 {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Stat Value */
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* Trend Colors */
+.stat-trend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.stat-trend.positive {
+    color: #059669;
+}
+
+.stat-trend.negative {
+    color: #dc2626;
+}
+
+/* Subtext */
+.stat-subtext {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin-top: 0.25rem;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+
+/* Chart Card */
+.chart-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+}
+
+.card-header {
+    margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.card-header p {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+    margin-top: 0.25rem;
+}
+
+.card-content {
+    height: 20rem;
+}
+
+/* Alerts Card */
+.alerts-card {
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Hover Effect */
+.alerts-card:hover {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+    transform: translateY(-3px); /* Slight lift */
+}
+
+/* Alerts Content */
+.alerts-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Alert Items */
+.alert-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--background-color);
+    border-radius: 0.5rem;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Hover Effect for Alert Items */
+.alert-item:hover {
+    background-color: #f3f4f6; /* Slightly darker background */
+    transform: scale(1.02);
+}
+
+/* Alert Info */
+.alert-info h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    transition: color 0.3s;
+}
+
+/* Hover Effect for Alert Text */
+.alert-item:hover .alert-info h4 {
+    color: #F35578; /* Primary color on hover */
+}
+
+.alert-info p {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+}
+
+/* Stock Level */
+.stock-level {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+}
+
+/* Alert Badge */
+.alert-badge {
+    background-color: #F35578;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 60px;
+    font-size: 0.875rem;
+    transition: background-color 0.3s ease-in-out;
+}
+
+/* Badge Hover Effect */
+.alert-item:hover .alert-badge {
+    background-color: #e11d48; /* Darker red */
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 1rem;
+    background-color: white;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 2rem;
+}
+
+.footer p {
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+}
+
+.stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+}
+
+.stat-item {
+    text-align: center;
+    width: 30%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.stat-item h3 {
+    font-size: 14px;
+    color: #555;
+}
+
+
+canvas {
+    width: 100% !important;
+    height: 300px !important;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 300px;
+    text-align: center;
+}
+.logo {
+    width: 50px; /* Adjust width */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 8px; /* Optional: Rounded corners */
+  }
+/* Flexbox for aligning the profile on the right */
+.card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.profile-right {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -417px;
+
+}
+
+.profile {
+    display: flex;
+    margin-right:-160px;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.profile-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.profile-dropdown {
+    display: none; /* Initially hide dropdown */
+    background-color: #fff;
+    position: absolute;
+    right: 0;
+    top: 40px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.profile:hover .profile-dropdown {
+    display: block; /* Show dropdown on hover */
+}
+
+.profile-dropdown a {
+    display: block;
+    padding: 8px;
+    text-decoration: none;
+    color: #1f2937;
+}
+
+.profile-dropdown a:hover {
+    background-color: #f9fafb;
+    border-radius: 4px;
+}
+
+/* Inventory Header Styles */
+.inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 8px;
+    margin: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-left h2 {
+    margin: 0;
+    color: #333;
+}
+
+.header-left p {
+    margin: 0.5rem 0 0;
+    color: #666;
+}
+
+/* Inventory Filters */
+.inventory-filters {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    margin: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.filter-select {
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+/* Inventory Table */
+.inventory-table-container {
+    margin: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: auto;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.inventory-table th {
+    background: #f8f8f8;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Stock Level Bar */
+.stock-bar {
+    width: 100%;
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.stock-level1{
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.stock-level {
+    height: 100%;
+    background: #4CAF50;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.stock-level.low {
+    background: #FFC107;
+}
+
+.stock-level.out {
+    background: #FF5252;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status-badge.in-stock {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.status-badge.low-stock {
+    background: #FFF3E0;
+    color: #F57C00;
+}
+
+.status-badge.out-of-stock {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+/* Action Buttons */
+.icon-btn {
+    padding: 0.5rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s;
+}
+
+.icon-btn:hover {
+    color: #ff69b4;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 500px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+}
+
+/* Form Styles */
+.item-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
