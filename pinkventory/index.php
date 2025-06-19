@@ -268,7 +268,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
 
 
-    <!-- Removed duplicate Node.js server script block to prevent variable redeclaration error -->
+    <script> 
+        const express = require('express');
+            const helmet = require('helmet');
+
+            const app = express();
+
+            app.use(
+            helmet.contentSecurityPolicy({
+                directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "https://trusted.cdn.com"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:"],
+                fontSrc: ["'self'", "https://fonts.gstatic.com"],
+                frameSrc: ["'none'"],
+                },
+            })
+            );
+
+            app.listen(3000, () => console.log('Server running on port 3000'));
+
+    </script>
 
 <script> 
 
