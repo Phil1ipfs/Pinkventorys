@@ -1,29 +1,10 @@
 <?php
-session_start();
-require_once 'connect.php'; // Ensure proper inclusion of database connection
+require_once 'bootstrap.php';
+require_login();
 
-// Check if user is logged in
-if (isset($_SESSION['email'])) {
-    $email = $_SESSION['email'];
-
-    // Fetch user data from the database
-    $sql = "SELECT fullname FROM users WHERE email = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc();
-        $fullname = $user['fullname']; // Store full name
-    } else {
-        $fullname = "Guest"; // Default if user not found
-    }
-} else {
-    $fullname = "Guest"; // Default if not logged in
-}
+$fullname = current_display_name($conn);
+$activePage = 'checkout';
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -31,8 +12,8 @@ if (isset($_SESSION['email'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcode Checkout System</title>
-    <link rel="stylesheet" href="styl.css?v=<?php echo time(); ?>">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.359.0/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
+    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -219,43 +200,7 @@ if (isset($_SESSION['email'])) {
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <header class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <button class="menu-btn" aria-label="Toggle menu">
-                    <i data-lucide="menu"></i>
-                </button>
-                <img src="BARBIE-removebg-preview 2.png" alt="Pinkventory Logo" class="logo">
-                <nav class="nav-links">
-                <h1 class="brand">Pinkventory</h1>
-                <nav class="nav-links">
-                    <a href="homepage.php" class="nav-link active">
-                        <i data-lucide="bar-chart-2"></i> Dashboard
-                    </a>
-                    <a href="inventory.php" class="nav-link">
-                        <i data-lucide="package"></i> Inventory
-                    </a>
-                    <a href="Checkout.php" class="nav-link">
-                        <i data-lucide="shopping-cart"></i> Checkout
-                    </a>
-                </nav>
-            </div>
-            <div class="search-container1">
-                <span class="search-icon1">&#128269;</span>
-                <input type="text" class="search-input1" id="search" placeholder="Search products...">
-                <div class="suggestions" id="suggestions"></div>
-            </div>
-            <div class="nav-right">
-                <span class="sync-status">
-                    <i data-lucide="clock"></i> Last sync: 2 min ago
-                </span>
-                <button class="user-btn" aria-label="User profile">
-                    <i data-lucide="user"></i>
-                </button>
-            </div>
-        </div>
-    </header>
+<?php include 'navbar.php'; ?>
 
     <div class="container">
         <div class="grid">
@@ -336,13 +281,15 @@ if (isset($_SESSION['email'])) {
 <div class="profile-right">
         <div class="profile">
             <img src="cillak.PNG" alt="User Profile" class="profile-img">
-            <span class="profile-name"><?php echo htmlspecialchars($fullname); ?></span>
+            <span class="profile-name"><?php echo e($fullname); ?></span>
 
             <!-- Dropdown Menu -->
             <div class="profile-dropdown">
                 <a href="#">⚙️ Settings</a>
-                <a href="index.php">🚪 Logout</a>
+                <a href="<?php echo e(logout_url()); ?>">🚪 Logout</a>
             </div>
+    </div>
+</div>
         </div>
 
     <script>

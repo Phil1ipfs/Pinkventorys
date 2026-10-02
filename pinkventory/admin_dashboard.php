@@ -1,24 +1,8 @@
 <?php
-session_start();
+require_once 'bootstrap.php';
+require_admin();
 
-// Set session timeout to 30 minutes (1800 seconds)
-$timeout = 1800;
-
-// Check if the session is set and if the timeout has been reached
-if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY'] > $timeout)) {
-    // Last request was more than 30 minutes ago
-    session_unset();     // Unset $_SESSION variable for the run-time 
-    session_destroy();   // Destroy session data in storage
-    if ($_SERVER['PHP_SELF'] != '/index.php') {
-        header("Location: index.php"); // Redirect to login page
-        exit();
-    }
-}
-
-// Update last activity time stamp
-$_SESSION['LAST_ACTIVITY'] = time();
-
-include('connect.php');
+$users = $conn->query("SELECT id, email, fullname, gender FROM users ORDER BY id");
 ?>
 
 
@@ -27,26 +11,29 @@ include('connect.php');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <title>Pinkventory</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="<?php echo asset('styles.css'); ?>">
 </head>
 
 <body>
     <div class="container">
         <!-- Sidebar -->
         <div class="sidebar">
-            <h2 class="logo">Literexia</h2>
+            <h2 class="logo">Pinkventory</h2>
             <nav>
                 <ul>
                     <li class="active">
-                        <a href="#"><i class="nav-icon">🏠</i> Home</a>
+                        <a href="admin_dashboard.php"><i class="nav-icon">🏠</i> Home</a>
+                    </li>
+                    <li>
+                        <a href="Admin.php"><i class="nav-icon">🛡️</i> Create Admin</a>
                     </li>
                     <li>
                         <a href="#"><i class="nav-icon">⚙️</i> Settings</a>
                     </li>
                     <li>
-                        <a href="index.php"><i class="nav-icon">🚪</i> Logout</a>
+                        <a href="<?php echo e(logout_url()); ?>"><i class="nav-icon">🚪</i> Logout</a>
                     </li>
 
                 </ul>
@@ -55,7 +42,7 @@ include('connect.php');
 
         <!-- Main Content -->
         <div class="main-content">
-            <h2>Welcome Admin !</h2>
+            <h2>Welcome <?php echo e($_SESSION['admin_username']); ?>!</h2>
             <h1>Dashboard Overview</h1>
             <a href="add_user.php" class="btn-add">ADD USER</a>
             <div class="table-container">
@@ -70,29 +57,16 @@ include('connect.php');
                         </tr>
                     </thead>
                     <tbody>
-                    <?php
-                            $query ="SELECT * FROM users";
-                            $result = mysqli_query($conn, $query);
-
-                            if(!$result){
-                                die("query Failed ".mysqli_error());
-                            }
-                            else{
-                                while($row = mysqli_fetch_assoc($result)){
-                                    ?>
-                                    <tr>
-                                            <td><?php echo $row['id']; ?></td>
-                                            <td><?php echo $row['email']; ?></td>
-                                            <td><?php echo $row['fullname']; ?></td>
-                                            <td><?php echo $row['gender']; ?></td>
-                                            <td><a href="update_user.php?id=<?php echo $row['id']; ?>" class="btn update">Update</a></td>
-                                            <td><button class="btn delete" onclick="deleteUser(<?php echo $row['id']; ?>)">Delete</button></td>
-                                        </tr>
-                                    <?php
-                                }
-                            }
-                            $conn->close();
-                            ?>
+                    <?php while ($row = $users->fetch_assoc()): ?>
+                        <tr>
+                            <td><?php echo (int) $row['id']; ?></td>
+                            <td><?php echo e($row['email']); ?></td>
+                            <td><?php echo e($row['fullname']); ?></td>
+                            <td><?php echo e($row['gender']); ?></td>
+                            <td><a href="update_user.php?id=<?php echo (int) $row['id']; ?>" class="btn update">Update</a></td>
+                            <td><button class="btn delete" onclick="deleteUser(<?php echo (int) $row['id']; ?>)">Delete</button></td>
+                        </tr>
+                    <?php endwhile; ?>
                     </tbody>
                 </table>
             </div>
@@ -100,6 +74,9 @@ include('connect.php');
     </div>
 
     <script>
+  const csrfToken = <?php echo json_encode(csrf_token()); ?>;
+  const logoutUrl = <?php echo json_encode(logout_url()); ?>;
+
   function deleteUser(userId) {
     if (confirm("Are you sure you want to delete this user?")) {
       // Send an AJAX request to delete_user.php with the user ID
@@ -114,7 +91,7 @@ include('connect.php');
           alert("Error deleting user");
         }
       };
-      xhr.send("id=" + userId);
+      xhr.send("id=" + encodeURIComponent(userId) + "&csrf_token=" + encodeURIComponent(csrfToken));
     }
   }
 </script>
@@ -125,8 +102,8 @@ include('connect.php');
     </div>
 
     <script>
-        // Set inactivity timeout (e.g., 5 minutes = 300,000 milliseconds)
-        const inactivityTimeout = 180000    ; // 5 minutes
+        // Inactivity timeout: 3 minutes (180,000 milliseconds)
+        const inactivityTimeout = 180000;
         const countdownDuration = 5; // Countdown duration in seconds
         let inactivityTimer;
         let countdownTimer;
@@ -134,6 +111,8 @@ include('connect.php');
         // Function to reset the inactivity timer
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
+            clearInterval(countdownTimer);
+            document.getElementById('inactivityWarning').style.display = 'none';
             inactivityTimer = setTimeout(showInactivityWarning, inactivityTimeout);
         }
 
@@ -161,7 +140,7 @@ include('connect.php');
 
         // Function to log out the user
         function logoutUser() {
-            window.location.href = 'index.php'; // Redirect to logout page
+            window.location.href = logoutUrl;
         }
 
         // Reset the timer on user activity (e.g., mouse movement, clicks, keypress)
@@ -172,7 +151,7 @@ include('connect.php');
         // Initialize the inactivity timer when the page loads
         resetInactivityTimer();
     </script>
-  
+
 
 </body>
 

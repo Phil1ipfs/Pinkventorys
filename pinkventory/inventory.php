@@ -1,17 +1,18 @@
 <?php
-include 'connect.php';
+require_once 'bootstrap.php';
+require_login();
 
-$sql = "SELECT * FROM inventory";
-$result = $conn->query($sql);
+$result = $conn->query("SELECT id, product_name, category, stock, price, status, last_updated FROM inventory ORDER BY product_name");
+$activePage = 'inventory';
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory Management - Pinkventory</title>
-    <link rel="stylesheet" href="styl.css?v=1.0">
+    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
+    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
     <style>
         /* Button Styling */
         .action-btn {
@@ -111,43 +112,7 @@ $result = $conn->query($sql);
 </head>
 <body>
 
-    <!-- Navigation Bar -->
-    <header class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <button class="menu-btn" aria-label="Toggle menu">
-                    <i data-lucide="menu"></i>
-                </button>
-                 <img src="BARBIE-removebg-preview 2.png" alt="Pinkventory Logo" class="logo">
-                    <h1 class="brand">Pinkventory</h1>
-                <nav class="nav-links">
-                <a href="homepage.php" class="nav-link active">
-                    <i data-lucide="bar-chart-2"></i> Dashboard
-                </a>
-                <a href="inventory.php" class="nav-link">
-                    <i data-lucide="package"></i> Inventory
-                </a>
-                <a href="Checkout.php" class="nav-link">
-                    <i data-lucide="shopping-cart"></i> Checkout
-                </a>
-            </nav>
-            </div>
-            <div class="search-container1">
-                <span class="search-icon1">&#128269;</span>
-                <input type="text" class="search-input1" id="search" placeholder="Search products...">
-                <div class="suggestions" id="suggestions"></div>
-            </div>
-            <div class="nav-right">
-                <span class="sync-status">
-                    <i data-lucide="clock"></i> Last sync: 2 min ago
-                </span>
-                <button class="user-btn" aria-label="User profile">
-                    <i data-lucide="user"></i>
-                </button>
-            </div>
-        </div>
-    </header>
-    
+<?php include 'navbar.php'; ?>
 <main class="main-content">
 
 
@@ -172,18 +137,19 @@ $result = $conn->query($sql);
             <tbody>
                 <?php while ($row = $result->fetch_assoc()) { ?>
                     <tr>
-                        <td><?php echo htmlspecialchars($row['product_name']); ?></td>
-                        <td><?php echo htmlspecialchars($row['category']); ?></td>
-                        <td><?php echo $row['stock']; ?></td>
-                        <td>$<?php echo number_format($row['price'], 2); ?></td>
-                        <td><span class="status-badge"><?php echo htmlspecialchars($row['status']); ?></span></td>
-                        <td><?php echo $row['last_updated']; ?></td>
+                        <td><?php echo e($row['product_name']); ?></td>
+                        <td><?php echo e($row['category']); ?></td>
+                        <td><?php echo (int) $row['stock']; ?></td>
+                        <td>$<?php echo number_format((float) $row['price'], 2); ?></td>
+                        <td><span class="status-badge <?php echo e(status_slug($row['status'])); ?>"><?php echo e(status_label($row['status'])); ?></span></td>
+                        <td><?php echo e($row['last_updated']); ?></td>
                         <td>
-                            <a href="update_product.php?id=<?php echo $row['id']; ?>" class="icon-btn edit-btn">
+                            <a href="update_product.php?id=<?php echo (int) $row['id']; ?>" class="icon-btn edit-btn">
                                 <i data-lucide="edit"></i> Update
                             </a>
                             <form action="delete_product.php" method="POST" style="display:inline;">
-                                <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+                                <?php echo csrf_field(); ?>
+                                <input type="hidden" name="id" value="<?php echo (int) $row['id']; ?>">
                                 <button type="submit" class="icon-btn delete-btn" onclick="return confirmDelete();">
                                     <i data-lucide="trash-2"></i> Delete
                                 </button>
@@ -197,17 +163,16 @@ $result = $conn->query($sql);
 </main>
 
 <script>
+    lucide.createIcons();
+
     function confirmDelete() {
         return confirm('⚠️ Are you sure you want to delete this item? This action cannot be undone.');
     }
-</script>
-<script>
 
-function addNewItem() {
-    window.location.href = "add_product.php";
-}
+    function addNewItem() {
+        window.location.href = "add_product.php";
+    }
 </script>
 
 </body>
 </html>
-<?php $conn->close(); ?>

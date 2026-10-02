@@ -1,28 +1,17 @@
 <?php
-session_start(); // Start the session to track user state
-require_once 'connect.php'; // Ensure proper inclusion of database connection
+require_once 'bootstrap.php';
+require_login();
 
-// Check if user is logged in (session has email)
-if (isset($_SESSION['email'])) {
-    $email = $_SESSION['email'];
+$fullname = current_display_name($conn);
+$activePage = 'dashboard';
 
-    // Fetch user data from the database using prepared statement for security
-    $sql = "SELECT fullname FROM users WHERE email = ?"; 
-    $stmt = $conn->prepare($sql); // Prepare SQL statement
-    $stmt->bind_param("s", $email); // Bind parameter to prevent SQL injection
-    $stmt->execute(); // Execute the query
-    $result = $stmt->get_result(); // Get the result of the query
-    
-    // Check if the user exists in the database
-    if ($result->num_rows > 0) {
-        $user = $result->fetch_assoc(); // Fetch user data
-        $fullname = $user['fullname']; // Store the user's full name
-    } else {
-        $fullname = "Guest"; // If user not found, default to "Guest"
-    }
-} else {
-    $fullname = "Guest"; // Default to "Guest" if user is not logged in
-}
+// Live inventory figures. Revenue and order charts remain sample data until a sales table exists.
+$activeItems = (int) $conn->query("SELECT COUNT(*) FROM inventory")->fetch_row()[0];
+$customerCount = (int) $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0];
+
+$lowStockWhere = "stock <= " . LOW_STOCK_THRESHOLD . " OR status IN ('low-stock', 'out-of-stock', 'Low Stock', 'Out of Stock')";
+$lowStockCount = (int) $conn->query("SELECT COUNT(*) FROM inventory WHERE $lowStockWhere")->fetch_row()[0];
+$lowStockItems = $conn->query("SELECT product_name, category, stock FROM inventory WHERE $lowStockWhere ORDER BY stock ASC, product_name LIMIT 5");
 ?>
 
 <!DOCTYPE html>
@@ -34,73 +23,34 @@ if (isset($_SESSION['email'])) {
     <meta name="keywords" content="inventory, retail, management, sales, dashboard">
     <meta name="author" content="Your Name">
     <title>Retail Store Inventory Management</title>
-    <link rel="stylesheet" href="styl.css?v=<?php echo time(); ?>">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.359.0/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
+    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  
-      
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <header class="navbar">
-        <div class="nav-container">
-            <div class="nav-left">
-                <button class="menu-btn" aria-label="Toggle menu">
-                    <i data-lucide="menu"></i>
-                </button>
-                 <img src="BARBIE-removebg-preview 2.png" alt="Pinkventory Logo" class="logo">
-                    <h1 class="brand">Pinkventory</h1>
-                <nav class="nav-links">
-                <a href="homepage.php" class="nav-link active">
-                    <i data-lucide="bar-chart-2"></i> Dashboard
-                </a>
-                <a href="inventory.php" class="nav-link">
-                    <i data-lucide="package"></i> Inventory
-                </a>
-                <a href="Checkout.php" class="nav-link">
-                    <i data-lucide="shopping-cart"></i> Checkout
-                </a>
-            </nav>
-            </div>
-            <div class="search-container1">
-                <span class="search-icon1">&#128269;</span>
-                <input type="text" class="search-input1" id="search" placeholder="Search products...">
-                <div class="suggestions" id="suggestions"></div>
-            </div>
-            <div class="nav-right">
-                <span class="sync-status">
-                    <i data-lucide="clock"></i> Last sync: 2 min ago
-                </span>
-                <button class="user-btn" aria-label="User profile">
-                    <i data-lucide="user"></i>
-                </button>
-            </div>
-        </div>
-    </header>
+<?php include 'navbar.php'; ?>
 
     <!-- Main Content -->
     <main class="main-content">
         <!-- Quick Actions -->
         <section class="quick-actions">
-            <button class="action-btn primary">
+            <button class="action-btn primary" onclick="window.location.href='Checkout.php'">
                 <i data-lucide="scan-barcode"></i>
                 New Sale
             </button>
-            <button class="action-btn secondary">
+            <button class="action-btn secondary" onclick="window.location.href='inventory.php'">
                 <i data-lucide="package"></i>
                 Manage Inventory
             </button>
             <!-- Profile Section -->
             <div class="profile">
               <img src="cillak.PNG" alt="User Profile" class="profile-img">
-              <span class="profile-name"><?php echo htmlspecialchars($fullname); ?></span>
+              <span class="profile-name"><?php echo e($fullname); ?></span>
 
               <!-- Dropdown Menu -->
               <div class="profile-dropdown">
                   <a href="#">⚙️ Settings</a>
-                  <a href="index.php">🚪 Logout</a>
+                  <a href="<?php echo e(logout_url()); ?>">🚪 Logout</a>
               </div>
           </div>
         </section>
@@ -138,8 +88,8 @@ if (isset($_SESSION['email'])) {
                     <i data-lucide="package"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-value">1,234</div>
-                    <div class="stat-trend negative">28 items low on stock</div>
+                    <div class="stat-value"><?php echo number_format($activeItems); ?></div>
+                    <div class="stat-trend negative"><?php echo $lowStockCount; ?> items low on stock</div>
                 </div>
             </div>
 
@@ -149,8 +99,8 @@ if (isset($_SESSION['email'])) {
                     <i data-lucide="users"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-value">89</div>
-                    <div class="stat-subtext">12 new today</div>
+                    <div class="stat-value"><?php echo number_format($customerCount); ?></div>
+                    <div class="stat-subtext">Registered accounts</div>
                 </div>
             </div>
         </section>
@@ -192,30 +142,23 @@ if (isset($_SESSION['email'])) {
                     <i data-lucide="alert-triangle" class="warning-icon"></i>
                 </div>
                 <div class="alerts-content">
+                    <?php while ($low = $lowStockItems->fetch_assoc()): ?>
                     <div class="alert-item">
                         <div class="alert-info">
-                            <h4>Organic Coffee Beans</h4>
-                            <p>Beverages</p>
-                            <div class="stock-level1">Stock: 5/10</div>
+                            <h4><?php echo e($low['product_name']); ?></h4>
+                            <p><?php echo e(ucfirst($low['category'])); ?></p>
+                            <div class="stock-level1">Stock: <?php echo (int) $low['stock']; ?></div>
                         </div>
                         <span class="alert-badge">Reorder</span>
                     </div>
+                    <?php endwhile; ?>
+                    <?php if ($lowStockCount === 0): ?>
                     <div class="alert-item">
                         <div class="alert-info">
-                            <h4>Premium Tea Bags</h4>
-                            <p>Beverages</p>
-                            <div class="stock-level1">Stock: 8/15</div>
+                            <h4>All stock levels look healthy</h4>
                         </div>
-                        <span class="alert-badge">Reorder</span>
                     </div>
-                    <div class="alert-item">
-                        <div class="alert-info">
-                            <h4>Mineral Water 500ml</h4>
-                            <p>Beverages</p>
-                            <div class="stock-level1">Stock: 12/20</div>
-                        </div>
-                        <span class="alert-badge">Reorder</span>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>
@@ -237,71 +180,6 @@ if (isset($_SESSION['email'])) {
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
-
-        // Initialize Sales Chart
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                datasets: [{
-                    label: 'Revenue',
-                    data: [4000, 3000, 5000, 2780, 6890, 8390, 3490],
-                    borderColor: '#2563eb',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: '#f0f0f0'
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                }
-            }
-        });
-    </script>
-
-<script>
-        document.getElementById('search').addEventListener('input', function() {
-            let query = this.value;
-            let suggestionsBox = document.getElementById('suggestions');
-            
-            if (query.length > 2) {
-                fetch(`search_api.php?q=${query}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        suggestionsBox.innerHTML = '';
-                        data.slice(0, 5).forEach(item => {
-                            let div = document.createElement('div');
-                            div.textContent = item;
-                            div.classList.add('suggestion-item');
-                            div.onclick = () => {
-                                document.getElementById('search').value = item;
-                                suggestionsBox.style.display = 'none';
-                            };
-                            suggestionsBox.appendChild(div);
-                        });
-                        suggestionsBox.style.display = 'block';
-                    });
-            } else {
-                suggestionsBox.style.display = 'none';
-            }
-        });
     </script>
 
 <script>
@@ -441,7 +319,7 @@ createMiniChart("aovChart", [42, 45, 41, 48, 47, 49, 50], "#CD5C5C", "$");
     }
 
     function logout() {
-        window.location.href = 'index.php'; // Redirect to logout page
+        window.location.href = <?php echo json_encode(logout_url()); ?>;
     }
 
     function showModal() {

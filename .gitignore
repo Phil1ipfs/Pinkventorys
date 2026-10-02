@@ -1,0 +1,3 @@
+# Real credentials live here; only config.example.php is committed.
+pinkventory/config.php
+*.log

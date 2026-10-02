@@ -1,34 +1,22 @@
 <?php
-include 'connect.php';
+require_once 'bootstrap.php';
+require_login();
+
+$error = null;
+$product = ['product_name' => '', 'category' => '', 'stock' => '', 'price' => '', 'status' => 'in-stock'];
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $name = trim($_POST['product_name']);
-    $category = trim($_POST['category']);
-    $stock = intval($_POST['stock']);
-    $price = floatval($_POST['price']);
-    $status = trim($_POST['status']);
+    [$product, $error] = validate_product($_POST);
 
-    // Validate inputs
-    if (empty($name) || empty($category) || $stock < 0 || $price < 0) {
-        echo "Invalid input data. Please check your fields.";
-        exit();
+    if (!$error) {
+        $stmt = $conn->prepare("INSERT INTO inventory (product_name, category, stock, price, status, last_updated) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("ssids", $product['product_name'], $product['category'], $product['stock'], $product['price'], $product['status']);
+        $stmt->execute();
+        redirect('inventory.php?success=added');
     }
-
-    // Insert data
-    $stmt = $conn->prepare("INSERT INTO inventory (product_name, category, stock, price, status, last_updated) VALUES (?, ?, ?, ?, ?, NOW())");
-    $stmt->bind_param("ssids", $name, $category, $stock, $price, $status);
-
-    if ($stmt->execute()) {
-        header("Location: inventory.php?success=Item added successfully");
-        exit();
-    } else {
-        echo "Error: " . $stmt->error;
-    }
-
-    $stmt->close();
 }
 
-$conn->close();
+$categories = ['electronics' => 'Electronics', 'clothing' => 'Clothing', 'accessories' => 'Accessories'];
 ?>
 
 <!DOCTYPE html>
@@ -37,7 +25,7 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add New Product - Pinkventory</title>
-    <link rel="stylesheet" href="styl.css?v=1.0">
+    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
     <style>
         body {
     font-family: 'Poppins', sans-serif;
@@ -138,37 +126,42 @@ input:focus, select:focus {
 
 <div class="container">
     <h2>Add New Product</h2>
+    <?php if ($error): ?>
+        <p style="color: #721c24; background: #f8d7da; padding: 10px; border-radius: 6px; text-align: center;"><?php echo e($error); ?></p>
+    <?php endif; ?>
     <form action="" method="POST">
+        <?php echo csrf_field(); ?>
         <div class="form-group">
             <label>Product Name:</label>
-            <input type="text" name="product_name" required>
+            <input type="text" name="product_name" value="<?php echo e($product['product_name']); ?>" maxlength="150" required>
         </div>
         <div class="form-group">
             <label>Category:</label>
             <select name="category" required>
-                <option value="electronics">Electronics</option>
-                <option value="clothing">Clothing</option>
-                <option value="accessories">Accessories</option>
+                <?php foreach ($categories as $value => $label): ?>
+                    <option value="<?php echo $value; ?>" <?php echo $product['category'] === $value ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <div class="form-group">
             <label>Stock Quantity:</label>
-            <input type="number" name="stock" min="0" required>
+            <input type="number" name="stock" min="0" value="<?php echo e($product['stock']); ?>" required>
         </div>
         <div class="form-group">
             <label>Price:</label>
-            <input type="number" name="price" step="0.01" min="0" required>
+            <input type="number" name="price" step="0.01" min="0" value="<?php echo e($product['price']); ?>" required>
         </div>
         <div class="form-group">
             <label>Status:</label>
             <select name="status" required>
-                <option value="in-stock">In Stock</option>
-                <option value="low-stock">Low Stock</option>
-                <option value="out-of-stock">Out of Stock</option>
+                <?php foreach (INVENTORY_STATUSES as $value => $label): ?>
+                    <option value="<?php echo $value; ?>" <?php echo $product['status'] === $value ? 'selected' : ''; ?>><?php echo $label; ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn">Add Product</button>
+            <p style="margin-top: 15px;"><a href="inventory.php">Cancel</a></p>
         </div>
     </form>
 </div>

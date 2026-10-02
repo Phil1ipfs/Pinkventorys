@@ -1,35 +1,40 @@
 <?php
-include 'connect.php';
+require_once 'bootstrap.php';
+require_login();
 
-if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-    $sql = "SELECT * FROM inventory WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $item = $result->fetch_assoc();
-} 
+$error = null;
+$id = filter_var($_POST['id'] ?? $_GET['id'] ?? null, FILTER_VALIDATE_INT);
+if (!$id) {
+    redirect('inventory.php');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = $_POST['id'];
-    $product_name = $_POST['product_name'];
-    $category = $_POST['category'];
-    $stock = $_POST['stock'];
-    $price = $_POST['price'];
-    $status = $_POST['status'];
+    [$product, $error] = validate_product($_POST);
 
-    $updateSql = "UPDATE inventory SET product_name=?, category=?, stock=?, price=?, status=?, last_updated=NOW() WHERE id=?";
-    $stmt = $conn->prepare($updateSql);
-    $stmt->bind_param("ssidsi", $product_name, $category, $stock, $price, $status, $id);
-
-    if ($stmt->execute()) {
-        header("Location: inventory.php");
-        exit();
-    } else {
-        echo "Error updating record: " . $conn->error;
+    if (!$error) {
+        $updateSql = "UPDATE inventory SET product_name=?, category=?, stock=?, price=?, status=?, last_updated=NOW() WHERE id=?";
+        $stmt = $conn->prepare($updateSql);
+        $stmt->bind_param("ssidsi", $product['product_name'], $product['category'], $product['stock'], $product['price'], $product['status'], $id);
+        $stmt->execute();
+        redirect('inventory.php');
     }
 }
+
+$stmt = $conn->prepare("SELECT * FROM inventory WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$item = $stmt->get_result()->fetch_assoc();
+
+if (!$item) {
+    http_response_code(404);
+    exit('Item not found. <a href="inventory.php">Back to inventory</a>');
+}
+
+// Keep what the user typed if validation failed.
+if ($error) {
+    $item = array_merge($item, array_intersect_key($_POST, array_flip(['product_name', 'category', 'stock', 'price', 'status'])));
+}
+$itemStatus = status_slug($item['status']);
 ?>
 
 <!DOCTYPE html>
@@ -38,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Item - Pinkventory</title>
-    <link rel="stylesheet" href="styl.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
 
     <style>
         body {
@@ -118,25 +123,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <main class="main-content">
     <h2>Edit Item</h2>
+    <?php if ($error): ?>
+        <p style="color: #721c24; background: #f8d7da; padding: 10px; border-radius: 6px;"><?php echo e($error); ?></p>
+    <?php endif; ?>
     <form action="update_product.php" method="POST">
-        <input type="hidden" name="id" value="<?php echo $item['id']; ?>">
+        <?php echo csrf_field(); ?>
+        <input type="hidden" name="id" value="<?php echo (int) $item['id']; ?>">
         <label>Product Name:</label>
-        <input type="text" name="product_name" value="<?php echo $item['product_name']; ?>" required>
+        <input type="text" name="product_name" value="<?php echo e($item['product_name']); ?>" maxlength="150" required>
         
         <label>Category:</label>
-        <input type="text" name="category" value="<?php echo $item['category']; ?>" required>
+        <input type="text" name="category" value="<?php echo e($item['category']); ?>" maxlength="50" required>
 
         <label>Stock Quantity:</label>
-        <input type="number" name="stock" value="<?php echo $item['stock']; ?>" required>
+        <input type="number" name="stock" min="0" value="<?php echo e($item['stock']); ?>" required>
 
         <label>Price:</label>
-        <input type="number" name="price" step="0.01" value="<?php echo $item['price']; ?>" required>
+        <input type="number" name="price" step="0.01" min="0" value="<?php echo e($item['price']); ?>" required>
 
         <label>Status:</label>
         <select name="status">
-            <option value="In Stock" <?php if ($item['status'] == 'In Stock') echo 'selected'; ?>>In Stock</option>
-            <option value="Low Stock" <?php if ($item['status'] == 'Low Stock') echo 'selected'; ?>>Low Stock</option>
-            <option value="Out of Stock" <?php if ($item['status'] == 'Out of Stock') echo 'selected'; ?>>Out of Stock</option>
+            <?php foreach (INVENTORY_STATUSES as $value => $label): ?>
+                <option value="<?php echo $value; ?>" <?php if ($itemStatus === $value) echo 'selected'; ?>><?php echo $label; ?></option>
+            <?php endforeach; ?>
         </select>
 
         <button type="submit" class="btn primary">Update Item</button>

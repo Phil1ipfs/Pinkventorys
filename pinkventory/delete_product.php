@@ -1,24 +1,16 @@
 <?php
-include 'connect.php';
+require_once 'bootstrap.php';
+require_login();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
-    $id = $_POST['id'];
+$id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
 
-    $sql = "DELETE FROM inventory WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $id);
-
-    if ($stmt->execute()) {
-        header("Location: inventory.php?deleted=success");
-        exit();
-    } else {
-        echo "Error: " . $stmt->error;
-    }
-
-    $stmt->close();
-} else {
-    echo "Invalid request.";
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !$id) {
+    http_response_code(400);
+    exit('Invalid request. <a href="inventory.php">Back to inventory</a>');
 }
 
-$conn->close();
-?>
+$stmt = $conn->prepare("DELETE FROM inventory WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+
+redirect('inventory.php?deleted=success');

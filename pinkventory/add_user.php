@@ -1,47 +1,43 @@
 <?php
-include('connect.php');
+require_once 'bootstrap.php';
+require_admin();
 
-session_start();
+$message = null;
+$messageType = 'danger';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $conn->real_escape_string($_POST['email']);
-    $fullName = $conn->real_escape_string($_POST['fullname']);
-    $gender = $conn->real_escape_string($_POST['gender']);
-    $password = $_POST['password'];
+    $email = trim((string) ($_POST['email'] ?? ''));
+    $fullName = trim((string) ($_POST['fullname'] ?? ''));
+    $gender = (string) ($_POST['gender'] ?? '');
+    $password = (string) ($_POST['password'] ?? '');
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo "<div class='alert alert-danger'>Invalid email address!</div>";
+        $message = "Invalid email address!";
+    } elseif ($fullName === '' || mb_strlen($fullName) > 100) {
+        $message = "Please enter a full name (up to 100 characters).";
+    } elseif (!in_array($gender, ['Male', 'Female', 'Other'], true)) {
+        $message = "Please select a valid gender.";
     } elseif (strlen($password) < 8) {
-        echo "<div class='alert alert-danger'>Password must be at least 8 characters long!</div>";
+        $message = "Password must be at least 8 characters long!";
     } else {
-        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-
         // Check if email already exists
-        $checkEmail = "SELECT * FROM users WHERE email = ?";
-        $stmt = $conn->prepare($checkEmail);
+        $stmt = $conn->prepare("SELECT 1 FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
-        $result = $stmt->get_result();
 
-        if ($result->num_rows > 0) {
-            echo "<div class='alert alert-danger'>Email Address Already Exists!</div>";
+        if ($stmt->get_result()->num_rows > 0) {
+            $message = "Email Address Already Exists!";
         } else {
-            $insertQuery = "INSERT INTO users (email, fullname, gender, password) VALUES (?, ?, ?, ?)";
-            $stmt = $conn->prepare($insertQuery);
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO users (email, fullname, gender, password) VALUES (?, ?, ?, ?)");
             $stmt->bind_param("ssss", $email, $fullName, $gender, $hashedPassword);
-
-            if ($stmt->execute()) {
-                echo "<div class='alert alert-success'>User added successfully!</div>";
-            } else {
-                error_log("Database error: " . $conn->error);
-                echo "<div class='alert alert-danger'>An error occurred. Please try again.</div>";
-            }
+            $stmt->execute();
+            $message = "User added successfully!";
+            $messageType = 'success';
         }
-        $stmt->close();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -156,7 +152,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <h1>Add User</h1>
+    <?php if ($message): ?>
+        <div class="alert alert-<?php echo $messageType; ?>"><?php echo e($message); ?></div>
+    <?php endif; ?>
     <form method="POST">
+        <?php echo csrf_field(); ?>
         <label>Email: </label>
         <input type="email" name="email" required><br>
         <label>Full Name: </label>
@@ -170,6 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>Password: </label>
         <input type="password" name="password" required><br>
         <button type="submit">Add User</button>
+        <p style="text-align: center; margin-top: 15px;"><a href="admin_dashboard.php">Back to dashboard</a></p>
     </form>
 
       <!-- Session Timeout Modal -->
@@ -183,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
     let timeout;
     let countdown;
-    const sessionTimeout = 20; // Session timeout in seconds
+    const sessionTimeout = 900; // Session timeout in seconds
     const warningTime = 10; // Time to show warning before timeout (in seconds)
 
     function startTimer() {
@@ -198,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     function logout() {
-        window.location.href = 'index.php'; // Redirect to logout page
+        window.location.href = <?php echo json_encode(logout_url()); ?>;
     }
 
     function showModal() {
