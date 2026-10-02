@@ -1,7 +1,7 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
-require_login();
+require_once 'includes/layout.php';
+require_admin();
 
 $errors = [];
 $values = ['product_name' => '', 'category' => '', 'stock' => '', 'price' => '', 'status' => 'in-stock'];
@@ -38,6 +38,6 @@ layout_start('Add product', 'inventory');
     </div>
 </div>
 
-<?php include 'product_form.php'; ?>
+<?php include 'includes/product_form.php'; ?>
 
 <?php layout_end(['product.js']); ?>

@@ -1,6 +1,6 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
+require_once 'includes/layout.php';
 require_admin();
 
 $genders = ['Male', 'Female', 'Other'];
@@ -8,7 +8,7 @@ $errors = [];
 
 $id = filter_var($_POST['id'] ?? $_GET['id'] ?? null, FILTER_VALIDATE_INT);
 if (!$id) {
-    redirect('admin_dashboard.php');
+    redirect('users.php');
 }
 
 $stmt = $conn->prepare("SELECT id, email, fullname, gender FROM users WHERE id = ?");
@@ -18,7 +18,7 @@ $user = $stmt->get_result()->fetch_assoc();
 
 if (!$user) {
     flash('error', 'That user no longer exists.');
-    redirect('admin_dashboard.php');
+    redirect('users.php');
 }
 
 $values = ['email' => $user['email'], 'fullname' => $user['fullname'], 'gender' => (string) $user['gender']];
@@ -50,7 +50,7 @@ if (isset($_POST['update'])) {
             $stmt->bind_param("sssi", $email, $fullname, $gender, $id);
             $stmt->execute();
             flash('success', $fullname . '’s details were updated.');
-            redirect('admin_dashboard.php');
+            redirect('users.php');
         }
     }
 }
@@ -64,7 +64,7 @@ layout_start('Edit ' . $user['fullname'], 'users');
 <div class="page-head">
     <div>
         <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a href="admin_dashboard.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Edit user</span>
+            <a href="users.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Edit user</span>
         </nav>
         <h1><?php echo e($user['fullname']); ?></h1>
         <p><?php echo e($user['email']); ?> · User #<?php echo (int) $user['id']; ?></p>
@@ -119,7 +119,7 @@ layout_start('Edit ' . $user['fullname'], 'users');
     </div>
 
     <div class="form-actions">
-        <a href="admin_dashboard.php" class="btn btn-secondary">Cancel</a>
+        <a href="users.php" class="btn btn-secondary">Cancel</a>
         <button type="submit" class="btn btn-primary"><?php echo icon('check'); ?> Save changes</button>
     </div>
 </form>

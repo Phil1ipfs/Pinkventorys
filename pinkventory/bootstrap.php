@@ -208,7 +208,7 @@ function status_slug(?string $status): string
 function icon(string $name, string $class = '', ?string $label = null): string
 {
     $a11y = $label === null ? 'aria-hidden="true"' : 'role="img" aria-label="' . e($label) . '"';
-    return '<svg class="icon ' . e($class) . '" ' . $a11y . ' focusable="false"><use href="' . asset('icons.svg') . '#' . e($name) . '"></use></svg>';
+    return '<svg class="icon ' . e($class) . '" ' . $a11y . ' focusable="false"><use href="' . asset('assets/img/icons.svg') . '#' . e($name) . '"></use></svg>';
 }
 
 /** Queues a toast message to show on the next page view. $type: success | error | info. */
@@ -306,7 +306,14 @@ function current_display_name(mysqli $conn): string
         $row = $stmt->get_result()->fetch_assoc();
         return $row['fullname'] ?? 'Guest';
     }
-    return $_SESSION['admin_username'] ?? 'Guest';
+    if (is_admin()) {
+        $stmt = $conn->prepare('SELECT fullname FROM admin WHERE username = ?');
+        $stmt->bind_param('s', $_SESSION['admin_username']);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        return ($row['fullname'] ?? '') !== '' ? $row['fullname'] : $_SESSION['admin_username'];
+    }
+    return 'Guest';
 }
 
 /* ---------------------------------------------------------------------------
@@ -393,4 +400,47 @@ function stock_level_sql(): array
 function level_label(string $level): string
 {
     return ['ok' => 'In stock', 'low' => 'Low stock', 'out' => 'Out of stock'][$level] ?? 'In stock';
+}
+
+/** Customer-only pages: admins are sent to their own dashboard. */
+function require_user(): void
+{
+    if (is_admin()) {
+        redirect('admin_dashboard.php');
+    }
+    if (!is_user()) {
+        redirect('login.php');
+    }
+}
+
+/**
+ * Products have no image column, so each one gets a consistent visual:
+ * an icon and colour tone chosen from its category.
+ * Returns [icon name, tone].
+ */
+function product_visual(?string $category): array
+{
+    $known = [
+        'electronics' => ['headphones', 'blue'],
+        'clothing'    => ['shirt', 'pink'],
+        'accessories' => ['watch', 'amber'],
+    ];
+    $key = strtolower(trim((string) $category));
+    if (isset($known[$key])) {
+        return $known[$key];
+    }
+    $tones = ['pink', 'blue', 'green', 'amber', 'violet'];
+    return ['package', $tones[crc32($key) % count($tones)]];
+}
+
+/** The signed-in customer's row from the users table (or null). */
+function current_user_row(mysqli $conn): ?array
+{
+    if (!is_user()) {
+        return null;
+    }
+    $stmt = $conn->prepare('SELECT id, email, fullname, dob, gender FROM users WHERE email = ?');
+    $stmt->bind_param('s', $_SESSION['email']);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc() ?: null;
 }

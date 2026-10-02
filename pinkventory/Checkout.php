@@ -1,88 +1,109 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
-require_login();
+require_once 'includes/layout.php';
+require_once 'includes/store.php';
+require_user();
 
-const TAX_RATE = 0.10;
+$customer = current_user_row($conn);
 
-layout_start('Checkout', 'checkout');
+layout_start('Checkout', 'cart');
 ?>
 
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="cart.php">Cart</a> <?php echo icon('chevron-right'); ?> <span>Checkout</span>
+</nav>
 <div class="page-head">
     <div>
         <h1>Checkout</h1>
-        <p>Scan a product ID or search by name to build the customer's cart.</p>
-    </div>
-    <div class="page-actions">
-        <button type="button" class="btn btn-secondary" id="clearCart" disabled><?php echo icon('refresh-cw'); ?> New sale</button>
+        <p>Confirm your details and review your order.</p>
     </div>
 </div>
 
-<div class="pos" data-tax-rate="<?php echo TAX_RATE; ?>">
-    <section class="card" aria-labelledby="cartTitle">
-        <h2 id="cartTitle" class="sr-only">Cart</h2>
+<div class="pos" data-cart-page data-checkout data-tax-rate="<?php echo STORE_TAX_RATE; ?>">
+    <div class="stack">
+        <section class="card" aria-labelledby="customerTitle">
+            <div class="card-head">
+                <div>
+                    <h2 id="customerTitle">Customer information</h2>
+                    <p>From your account</p>
+                </div>
+                <a href="profile.php" class="btn btn-secondary btn-sm no-print"><?php echo icon('pencil', 'icon-sm'); ?> Edit</a>
+            </div>
+            <dl class="card-body detail-facts detail-facts-2">
+                <div><dt>Full name</dt><dd><?php echo e($customer['fullname'] ?? ''); ?></dd></div>
+                <div><dt>Email address</dt><dd><?php echo e($customer['email'] ?? ''); ?></dd></div>
+            </dl>
+        </section>
+
+        <section class="card" aria-labelledby="itemsTitle">
+            <div class="card-head">
+                <div>
+                    <h2 id="itemsTitle">Order items</h2>
+                    <p>Prices are checked against current stock</p>
+                </div>
+                <a href="cart.php" class="btn btn-secondary btn-sm no-print"><?php echo icon('shopping-cart', 'icon-sm'); ?> Edit cart</a>
+            </div>
+            <div class="cart-loading empty empty-sm" data-cart-loading>
+                <span class="spinner"></span>
+                <p>Checking current prices and stock…</p>
+            </div>
+            <div class="empty empty-sm" data-cart-empty hidden>
+                <span class="empty-icon"><?php echo icon('shopping-cart'); ?></span>
+                <h3>Your cart is empty</h3>
+                <p>Add products before checking out.</p>
+                <a href="shop.php" class="btn btn-primary btn-sm"><?php echo icon('store', 'icon-sm'); ?> Go to shop</a>
+            </div>
+            <div data-cart-notices></div>
+            <ul class="rows" data-checkout-items></ul>
+        </section>
+
+        <section class="card no-print" aria-labelledby="paymentTitle">
+            <div class="card-head">
+                <div>
+                    <h2 id="paymentTitle">Payment method</h2>
+                    <p>Recorded with your order. No payment is taken online.</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="choices choices-2" role="radiogroup" aria-labelledby="paymentTitle">
+                    <label class="choice">
+                        <input type="radio" name="payment_method" value="cash" checked>
+                        <span><?php echo icon('banknote', 'icon-sm'); ?> Cash</span>
+                    </label>
+                    <label class="choice">
+                        <input type="radio" name="payment_method" value="card">
+                        <span><?php echo icon('credit-card', 'icon-sm'); ?> Card</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <aside class="card summary-card" aria-labelledby="summaryTitle">
         <div class="receipt-head">
             <h2>Pinkventory</h2>
-            <p class="muted">Receipt · <span id="receiptDate"></span></p>
+            <p class="muted">Order summary · <span data-receipt-date></span></p>
         </div>
-
-        <form class="pos-search no-print" id="lookupForm" role="search" autocomplete="off">
-            <label for="lookup" class="sr-only">Product ID or name</label>
-            <div class="control">
-                <?php echo icon('scan-barcode'); ?>
-                <input type="search" id="lookup" class="input" placeholder="Scan or type a product ID or name, then press Enter"
-                       role="combobox" aria-expanded="false" aria-controls="lookupResults" aria-autocomplete="list" autofocus>
-            </div>
-            <ul class="results" id="lookupResults" role="listbox" hidden></ul>
-        </form>
-
-        <div id="cartEmpty" class="empty">
-            <span class="empty-icon"><?php echo icon('shopping-cart'); ?></span>
-            <h3>The cart is empty</h3>
-            <p>Scan a product ID or search for a product above to add it to this sale.</p>
-        </div>
-
-        <div class="table-wrap" id="cartTableWrap" hidden>
-            <table class="table table-cards">
-                <thead>
-                    <tr>
-                        <th scope="col">Product</th>
-                        <th scope="col" class="right">Price</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col" class="right">Total</th>
-                        <th scope="col" class="actions no-print"><span class="sr-only">Remove</span></th>
-                    </tr>
-                </thead>
-                <tbody id="cartItems"></tbody>
-            </table>
-        </div>
-    </section>
-
-    <aside class="card" aria-labelledby="summaryTitle">
         <div class="card-head">
             <div>
                 <h2 id="summaryTitle">Order summary</h2>
-                <p><span id="itemCount">0</span> items</p>
+                <p><span data-summary-count>0</span> items</p>
             </div>
         </div>
         <div class="card-body">
-            <div class="summary-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
-            <div class="summary-row"><span>Tax (<?php echo TAX_RATE * 100; ?>%)</span><span id="tax">$0.00</span></div>
-            <div class="summary-row summary-total"><span>Total</span><span id="total">$0.00</span></div>
-
+            <div class="summary-row"><span>Subtotal</span><span data-summary-subtotal>$0.00</span></div>
+            <div class="summary-row"><span>Tax (<?php echo STORE_TAX_RATE * 100; ?>%)</span><span data-summary-tax>$0.00</span></div>
+            <div class="summary-row summary-total"><span>Total</span><span data-summary-total>$0.00</span></div>
             <div class="pos-actions no-print">
-                <div class="pair">
-                    <button type="button" class="btn btn-secondary" disabled aria-describedby="paymentNote"><?php echo icon('credit-card'); ?> Card</button>
-                    <button type="button" class="btn btn-secondary" disabled aria-describedby="paymentNote"><?php echo icon('banknote'); ?> Cash</button>
-                </div>
-                <button type="button" class="btn btn-primary btn-lg" id="printReceipt" disabled><?php echo icon('printer'); ?> Print receipt</button>
+                <button type="button" class="btn btn-primary btn-lg" disabled aria-describedby="placeOrderNote"><?php echo icon('lock'); ?> Place order</button>
+                <button type="button" class="btn btn-secondary" data-print disabled><?php echo icon('printer'); ?> Print summary</button>
             </div>
-            <p class="note no-print" id="paymentNote">
+            <p class="note no-print" id="placeOrderNote">
                 <?php echo icon('info'); ?>
-                <span>Payments and sales history aren't connected yet: completing a sale here doesn't charge a card or change stock levels.</span>
+                <span>Online ordering isn't switched on yet, so orders can't be placed or saved. Your cart is kept on this device.</span>
             </p>
         </div>
     </aside>
 </div>
 
-<?php layout_end(['checkout.js']); ?>
+<?php layout_end(['store.js']); ?>

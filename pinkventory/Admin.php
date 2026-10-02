@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($blocked)) {
 // Signed-in admins go back to the users list with a confirmation toast.
 if ($messageType === 'success' && is_admin()) {
     flash('success', 'Admin account “' . $username . '” was created.');
-    redirect('admin_dashboard.php');
+    redirect('users.php');
 }
 
 $adminFields = function () {
@@ -92,13 +92,13 @@ $adminFields = function () {
 };
 
 if (is_admin()):
-    require_once 'layout.php';
+    require_once 'includes/layout.php';
     layout_start('Add admin', 'admins');
     ?>
     <div class="page-head">
         <div>
             <nav class="breadcrumb" aria-label="Breadcrumb">
-                <a href="admin_dashboard.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Add admin</span>
+                <a href="users.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Add admin</span>
             </nav>
             <h1>Add admin</h1>
             <p>Admins can manage users and create other admins.</p>
@@ -119,7 +119,7 @@ if (is_admin()):
             <div class="fields"><?php $adminFields(); ?></div>
         </div>
         <div class="form-actions">
-            <a href="admin_dashboard.php" class="btn btn-secondary">Cancel</a>
+            <a href="users.php" class="btn btn-secondary">Cancel</a>
             <button type="submit" name="adminSignUp" class="btn btn-primary"><?php echo icon('shield-check'); ?> Create admin</button>
         </div>
     </form>
@@ -134,44 +134,47 @@ endif;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create admin account · Pinkventory</title>
-    <link rel="icon" type="image/png" href="pinkventory-logo.png">
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap">
-    <link rel="stylesheet" href="<?php echo asset('auth.css'); ?>">
-    <script src="<?php echo asset('auth.js'); ?>" defer></script>
+    <link rel="stylesheet" href="<?php echo asset('assets/css/auth.css'); ?>">
+    <script src="<?php echo asset('assets/js/auth.js'); ?>" defer></script>
 </head>
 <body>
 <div class="auth">
     <aside class="auth-aside">
         <a href="index.php" class="brand-link">
-            <img src="pinkventory-logo.png" alt="">
+            <img src="assets/img/logo.png" alt="">
             Pinkventory
         </a>
 
         <div class="aside-body">
+            <p class="eyebrow">Store setup</p>
             <h2>Welcome, Admin!</h2>
-            <p>Admins manage user accounts and keep the store running smoothly.</p>
-            <ul class="perks">
-                <li><span class="perk-icon"><?php echo icon('users'); ?></span> Add, edit and remove users</li>
-                <li><span class="perk-icon"><?php echo icon('shield-check'); ?></span> Protected admin-only area</li>
-                <li><span class="perk-icon"><?php echo icon('key-round'); ?></span> Strong password required</li>
-            </ul>
+            <p>Create the first administrator account to manage inventory and users.</p>
         </div>
 
-        <div class="aside-foot">
-            <a href="index.php"><?php echo icon('arrow-left'); ?> Back to home</a>
+        <div class="illustration">
+            <img src="assets/img/illus-signin.svg" alt="" width="340" height="250">
         </div>
+
+        <ul class="features">
+            <li><?php echo icon('package'); ?> Manage inventory</li>
+            <li><?php echo icon('users'); ?> Manage users</li>
+            <li><?php echo icon('shield-check'); ?> Admin-only area</li>
+        </ul>
     </aside>
 
     <main class="auth-main">
         <div class="auth-card">
             <a href="index.php" class="brand-link mobile-brand">
-                <img src="pinkventory-logo.png" alt="">
+                <img src="assets/img/logo.png" alt="">
                 Pinkventory
             </a>
 
-            <h1>Create admin account</h1>
+            <p class="card-switch">Already have an admin account?<a href="login.php">Log in <?php echo icon('arrow-right'); ?></a></p>
+            <h1>Create admin <span class="accent">account</span></h1>
             <p class="lead">Set up the first administrator for this store.</p>
 
             <?php if (!empty($blocked)): ?>
@@ -179,7 +182,7 @@ endif;
                     <?php echo icon('lock'); ?>
                     <span>Only a signed-in admin can create new admin accounts.</span>
                 </div>
-                <a href="login.php" class="btn-primary">Go to sign in <?php echo icon('arrow-right'); ?></a>
+                <a href="login.php" class="btn-primary">Go to log in <?php echo icon('arrow-right'); ?></a>
             <?php else: ?>
                 <?php if ($message): ?>
                     <div class="alert alert-<?php echo $messageType; ?>" role="<?php echo $messageType === 'success' ? 'status' : 'alert'; ?>">
@@ -187,7 +190,7 @@ endif;
                         <span>
                             <?php echo e($message); ?>
                             <?php if ($messageType === 'success'): ?>
-                                <a href="login.php">Sign in now</a>.
+                                <a href="login.php">Log in now</a>.
                             <?php endif; ?>
                         </span>
                     </div>
@@ -197,11 +200,9 @@ endif;
                     <form method="post" action="" class="form">
                         <?php echo csrf_field(); ?>
                         <?php $adminFields(); ?>
-                        <button type="submit" name="adminSignUp" class="btn-primary">Create admin account <?php echo icon('arrow-right'); ?></button>
+                        <button type="submit" name="adminSignUp" class="btn-primary"><?php echo icon('shield-check'); ?> Create admin account <?php echo icon('arrow-right'); ?></button>
                     </form>
                 <?php endif; ?>
-
-                <p class="switch-line">Already have an admin account? <a href="login.php">Sign in</a></p>
             <?php endif; ?>
         </div>
     </main>

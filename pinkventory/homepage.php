@@ -1,236 +1,97 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
-require_login();
+require_once 'includes/layout.php';
+require_once 'includes/store.php';
+require_user();
 
 $fullname = current_display_name($conn);
 $firstName = strtok($fullname, ' ') ?: $fullname;
-
-// Every figure below comes from the inventory and users tables.
 $levels = stock_level_sql();
-$lowSql = $levels['low'];
-$outSql = $levels['out'];
 
-$totals = $conn->query("SELECT
-        COUNT(*) AS products,
-        COALESCE(SUM(stock), 0) AS units,
-        COALESCE(SUM(stock * price), 0) AS value,
-        COALESCE(SUM($lowSql), 0) AS low,
-        COALESCE(SUM($outSql), 0) AS out_of_stock,
-        COUNT(DISTINCT category) AS categories
-    FROM inventory")->fetch_assoc();
+$available = (int) $conn->query("SELECT COUNT(*) FROM inventory WHERE NOT {$levels['out']}")->fetch_row()[0];
+$categories = $conn->query("SELECT LOWER(category) AS category, COUNT(*) AS items FROM inventory
+    GROUP BY LOWER(category) ORDER BY items DESC, category")->fetch_all(MYSQLI_ASSOC);
+$newArrivals = $conn->query("SELECT id, product_name, category, stock, price, status FROM inventory
+    WHERE NOT {$levels['out']} ORDER BY last_updated DESC, id DESC LIMIT 4")->fetch_all(MYSQLI_ASSOC);
 
-$products = (int) $totals['products'];
-$low = (int) $totals['low'];
-$out = (int) $totals['out_of_stock'];
-$healthy = max($products - $low - $out, 0);
-$customers = (int) $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0];
-
-// Inventory value by category (top 6, the rest folded into "Other")
-$categoryRows = $conn->query("SELECT category, COUNT(*) AS items, COALESCE(SUM(stock * price), 0) AS value
-    FROM inventory GROUP BY category ORDER BY value DESC")->fetch_all(MYSQLI_ASSOC);
-if (count($categoryRows) > 6) {
-    $rest = array_slice($categoryRows, 5);
-    $categoryRows = array_slice($categoryRows, 0, 5);
-    $categoryRows[] = [
-        'category' => 'Other',
-        'items' => array_sum(array_column($rest, 'items')),
-        'value' => array_sum(array_column($rest, 'value')),
-    ];
-}
-$maxCategoryValue = max(array_merge([0.01], array_map('floatval', array_column($categoryRows, 'value'))));
-
-$attention = $conn->query("SELECT id, product_name, category, stock, status FROM inventory
-    WHERE $lowSql OR $outSql ORDER BY stock ASC, product_name LIMIT 5")->fetch_all(MYSQLI_ASSOC);
-
-$recent = $conn->query("SELECT id, product_name, category, stock, status, last_updated FROM inventory
-    ORDER BY last_updated DESC, id DESC LIMIT 6")->fetch_all(MYSQLI_ASSOC);
-
-$statusParts = [
-    ['In stock', $healthy, 'var(--ok-mark)', 'in-stock'],
-    ['Low stock', $low, 'var(--warn-mark)', 'low-stock'],
-    ['Out of stock', $out, 'var(--danger-mark)', 'out-of-stock'],
-];
-
-layout_start('Dashboard', 'dashboard');
+layout_start('Home', 'home');
 ?>
 
-<div class="welcome">
-    <div>
-        <h1>Welcome back, <?php echo e($firstName); ?></h1>
-        <p>Here's how your stock looks right now.</p>
+<section class="store-hero">
+    <div class="store-hello">
+        <h1>Hello, <?php echo e($firstName); ?>!</h1>
+        <p>Welcome back to Pinkventory. Find the products you need.</p>
+        <a href="shop.php" class="btn btn-primary"><?php echo icon('store'); ?> Shop now</a>
     </div>
-    <div class="page-actions">
-        <a href="Checkout.php" class="btn btn-secondary"><?php echo icon('scan-barcode'); ?> New sale</a>
-        <a href="add_product.php" class="btn btn-primary"><?php echo icon('plus'); ?> Add product</a>
-    </div>
-</div>
-
-<section class="stats" aria-label="Inventory summary">
-    <a href="inventory.php" class="card stat">
-        <div class="stat-top">Total products <span class="stat-icon"><?php echo icon('package'); ?></span></div>
-        <div class="stat-value num"><?php echo number_format($products); ?></div>
-        <div class="stat-meta">Across <?php echo (int) $totals['categories']; ?> <?php echo (int) $totals['categories'] === 1 ? 'category' : 'categories'; ?></div>
-    </a>
-    <div class="card stat">
-        <div class="stat-top">Inventory value <span class="stat-icon is-ok"><?php echo icon('wallet'); ?></span></div>
-        <div class="stat-value num"><?php echo money((float) $totals['value']); ?></div>
-        <div class="stat-meta">Stock on hand × price</div>
-    </div>
-    <div class="card stat">
-        <div class="stat-top">Units in stock <span class="stat-icon is-info"><?php echo icon('boxes'); ?></span></div>
-        <div class="stat-value num"><?php echo number_format((int) $totals['units']); ?></div>
-        <div class="stat-meta"><?php echo number_format($customers); ?> registered <?php echo $customers === 1 ? 'customer' : 'customers'; ?></div>
-    </div>
-    <a href="inventory.php?status=attention" class="card stat">
-        <div class="stat-top">Needs attention <span class="stat-icon is-warn"><?php echo icon('bell-ring'); ?></span></div>
-        <div class="stat-value num"><?php echo number_format($low + $out); ?></div>
-        <div class="stat-meta"><strong class="is-warn"><?php echo $low; ?> low</strong> · <strong class="is-danger"><?php echo $out; ?> out of stock</strong></div>
-    </a>
-</section>
-
-<div class="grid-2">
-    <section class="card" aria-labelledby="valueTitle">
-        <div class="card-head">
-            <div>
-                <h2 id="valueTitle">Inventory value by category</h2>
-                <p>Stock on hand × unit price</p>
-            </div>
-        </div>
-        <div class="card-body">
-            <?php if (!$categoryRows): ?>
-                <div class="empty empty-sm">
-                    <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
-                    <h3>No data yet</h3>
-                    <p>Add products to see how your stock value splits across categories.</p>
-                    <a href="add_product.php" class="btn btn-primary btn-sm"><?php echo icon('plus', 'icon-sm'); ?> Add product</a>
-                </div>
-            <?php else: ?>
-                <ul class="hbars">
-                    <?php foreach ($categoryRows as $row):
-                        $value = (float) $row['value'];
-                        $label = ucfirst((string) $row['category']);
-                        $pct = max(0, min(100, $value / $maxCategoryValue * 100)); ?>
-                        <li class="hbar" tabindex="0" title="<?php echo e($label . ': ' . money($value) . ' across ' . $row['items'] . ' products'); ?>">
-                            <span class="hbar-label"><?php echo e($label); ?></span>
-                            <span class="hbar-track"><span class="hbar-fill" style="width: <?php echo round($pct, 2); ?>%"></span></span>
-                            <span class="hbar-value"><?php echo money($value); ?><span class="hbar-sub"><?php echo (int) $row['items']; ?> <?php echo (int) $row['items'] === 1 ? 'product' : 'products'; ?></span></span>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-            <?php endif; ?>
-        </div>
-    </section>
-
-    <section class="card" aria-labelledby="statusTitle">
-        <div class="card-head">
-            <div>
-                <h2 id="statusTitle">Stock status</h2>
-                <p><?php echo number_format($products); ?> products</p>
-            </div>
-        </div>
-        <div class="card-body">
-            <?php if ($products > 0): ?>
-                <div class="segbar" role="img" aria-label="<?php echo e("$healthy in stock, $low low stock, $out out of stock"); ?>">
-                    <?php foreach ($statusParts as [$label, $count, $color]): if ($count > 0): ?>
-                        <span style="flex: <?php echo $count; ?>; background: <?php echo $color; ?>" title="<?php echo e("$label: $count"); ?>"></span>
-                    <?php endif; endforeach; ?>
-                </div>
-            <?php endif; ?>
-            <ul class="legend">
-                <?php foreach ($statusParts as [$label, $count, $color, $slug]): ?>
-                    <li>
-                        <span class="swatch" style="background: <?php echo $color; ?>"></span>
-                        <a class="label" href="inventory.php?status=<?php echo $slug; ?>"><?php echo e($label); ?></a>
-                        <span class="value"><?php echo number_format($count); ?></span>
-                        <span class="pct"><?php echo $products ? round($count / $products * 100) : 0; ?>%</span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </section>
-</div>
-
-<div class="grid-2">
-    <section class="card" aria-labelledby="recentTitle">
-        <div class="card-head">
-            <div>
-                <h2 id="recentTitle">Recently updated</h2>
-                <p>Latest product changes</p>
-            </div>
-            <a href="inventory.php?sort=updated&amp;dir=desc" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
-        </div>
-        <?php if (!$recent): ?>
-            <div class="empty empty-sm">
-                <span class="empty-icon"><?php echo icon('history'); ?></span>
-                <h3>No activity yet</h3>
-                <p>Products you add or edit will show up here.</p>
-            </div>
-        <?php else: ?>
-            <ul class="rows">
-                <?php foreach ($recent as $item): $level = stock_level((int) $item['stock'], $item['status']); ?>
-                    <li class="row-item">
-                        <span class="thumb"><?php echo icon('package'); ?></span>
-                        <div class="grow">
-                            <strong><a href="update_product.php?id=<?php echo (int) $item['id']; ?>"><?php echo e($item['product_name']); ?></a></strong>
-                            <span><?php echo e(ucfirst($item['category'])); ?> · <?php echo (int) $item['stock']; ?> in stock</span>
-                        </div>
-                        <span class="badge badge-<?php echo $level; ?>"><?php echo level_label($level); ?></span>
-                        <time datetime="<?php echo e($item['last_updated']); ?>" title="<?php echo e($item['last_updated']); ?>"><?php echo e(time_ago($item['last_updated'])); ?></time>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-    </section>
-
-    <section class="card" aria-labelledby="lowTitle">
-        <div class="card-head">
-            <div>
-                <h2 id="lowTitle">Low stock alerts</h2>
-                <p>At or below <?php echo LOW_STOCK_THRESHOLD; ?> units, or marked low/out</p>
-            </div>
-            <a href="inventory.php?status=attention" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
-        </div>
-        <?php if (!$attention): ?>
-            <div class="empty empty-sm">
-                <span class="empty-icon"><?php echo icon('package-check'); ?></span>
-                <h3>All stocked up</h3>
-                <p>No products are running low right now.</p>
-            </div>
-        <?php else: ?>
-            <ul class="rows">
-                <?php foreach ($attention as $item):
-                    $stock = (int) $item['stock'];
-                    $level = stock_level($stock, $item['status']);
-                    $fill = min(100, $stock / max(LOW_STOCK_THRESHOLD, 1) * 100); ?>
-                    <li class="row-item">
-                        <div class="grow">
-                            <strong><a href="update_product.php?id=<?php echo (int) $item['id']; ?>"><?php echo e($item['product_name']); ?></a></strong>
-                            <span><?php echo e(ucfirst($item['category'])); ?></span>
-                        </div>
-                        <span class="meter" title="<?php echo $stock; ?> of <?php echo LOW_STOCK_THRESHOLD; ?>"><span style="width: <?php echo $fill; ?>%; background: <?php echo $level === 'out' ? 'var(--danger-mark)' : 'var(--warn-mark)'; ?>"></span></span>
-                        <span class="badge badge-<?php echo $level; ?>"><?php echo $stock; ?> left</span>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-    </section>
-</div>
-
-<section class="card" aria-labelledby="salesTitle">
-    <div class="card-head">
+    <a href="shop.php" class="promo">
         <div>
-            <h2 id="salesTitle">Sales &amp; revenue</h2>
-            <p>Revenue, orders and average order value</p>
+            <strong>Everything in stock, one click away</strong>
+            <span><?php echo number_format($available); ?> products ready to order</span>
+            <span class="promo-cta">Browse products <?php echo icon('arrow-right', 'icon-sm'); ?></span>
         </div>
-        <span class="placeholder-tag"><?php echo icon('info', 'icon-sm'); ?> Not set up</span>
-    </div>
-    <div class="empty empty-sm">
-        <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
-        <h3>Sales tracking isn't set up yet</h3>
-        <p>Checkout totals aren't saved to the database yet, so there's no real revenue or order history to chart. This section will fill in once sales are recorded.</p>
-        <a href="Checkout.php" class="btn btn-secondary btn-sm"><?php echo icon('scan-barcode', 'icon-sm'); ?> Open checkout</a>
-    </div>
+        <span class="promo-art" aria-hidden="true"><?php echo icon('shopping-bag'); ?></span>
+    </a>
 </section>
 
-<?php layout_end(); ?>
+<section class="stats" aria-label="Your store at a glance">
+    <a href="shop.php" class="card stat">
+        <div class="stat-top">Products available <span class="stat-icon"><?php echo icon('package'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format($available); ?></div>
+        <div class="stat-meta link-more">Browse shop <?php echo icon('arrow-right'); ?></div>
+    </a>
+    <a href="shop.php" class="card stat">
+        <div class="stat-top">Categories <span class="stat-icon is-info"><?php echo icon('layers'); ?></span></div>
+        <div class="stat-value num"><?php echo count($categories); ?></div>
+        <div class="stat-meta link-more">See all <?php echo icon('arrow-right'); ?></div>
+    </a>
+    <a href="cart.php" class="card stat">
+        <div class="stat-top">In your cart <span class="stat-icon is-warn"><?php echo icon('shopping-cart'); ?></span></div>
+        <div class="stat-value num" data-cart-total-count>0</div>
+        <div class="stat-meta link-more">View cart <?php echo icon('arrow-right'); ?></div>
+    </a>
+    <a href="profile.php" class="card stat">
+        <div class="stat-top">Your account <span class="stat-icon is-ok"><?php echo icon('user'); ?></span></div>
+        <div class="stat-value stat-value-sm"><?php echo e($firstName); ?></div>
+        <div class="stat-meta link-more">Manage profile <?php echo icon('arrow-right'); ?></div>
+    </a>
+</section>
+
+<section class="section-block" aria-labelledby="arrivalsTitle">
+    <div class="section-head">
+        <h2 id="arrivalsTitle">New arrivals</h2>
+        <a href="shop.php" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
+    </div>
+    <?php if (!$newArrivals): ?>
+        <div class="card empty">
+            <span class="empty-icon"><?php echo icon('package'); ?></span>
+            <h3>No products available yet</h3>
+            <p>Check back soon. New products appear here as soon as they're in stock.</p>
+        </div>
+    <?php else: ?>
+        <div class="product-grid">
+            <?php foreach ($newArrivals as $p) echo product_card($p); ?>
+        </div>
+    <?php endif; ?>
+</section>
+
+<?php if ($categories): ?>
+    <section class="section-block" aria-labelledby="categoriesTitle">
+        <div class="section-head">
+            <h2 id="categoriesTitle">Shop by category</h2>
+        </div>
+        <div class="category-grid">
+            <?php foreach ($categories as $cat): [$catIcon, $tone] = product_visual($cat['category']); ?>
+                <a href="shop.php?category=<?php echo urlencode($cat['category']); ?>" class="category-card card">
+                    <span class="thumb tone-<?php echo $tone; ?>"><?php echo icon($catIcon); ?></span>
+                    <span>
+                        <strong><?php echo e(ucfirst($cat['category'])); ?></strong>
+                        <small><?php echo (int) $cat['items']; ?> <?php echo (int) $cat['items'] === 1 ? 'product' : 'products'; ?></small>
+                    </span>
+                    <?php echo icon('chevron-right', 'icon-sm'); ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+<?php endif; ?>
+
+<?php layout_end(['store.js']); ?>

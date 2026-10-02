@@ -1,6 +1,6 @@
 <?php
 require_once 'bootstrap.php';
-require_login();
+require_admin();
 
 $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT);
 

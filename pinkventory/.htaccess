@@ -1,11 +1,22 @@
 Options -Indexes
 DirectoryIndex index.php
 
-# Block configuration, internal includes and stray files from direct web access.
-<FilesMatch "^(config\.php|config\.example\.php|bootstrap.php|layout.php|product_form.php|.*\.sql|.*\.md|.*\.log)$">
+# Block configuration, internal files and stray files from direct web access.
+# (includes/ has its own .htaccess that denies everything.)
+<FilesMatch "^(config\.php|config\.example\.php|bootstrap\.php|.*\.sql|.*\.md|.*\.log)$">
     Require all denied
 </FilesMatch>
 
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
+
+# Static assets carry a ?v=<file time> version, so browsers may cache them for long.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 30 days"
+    ExpiresByType application/javascript "access plus 30 days"
+    ExpiresByType text/javascript "access plus 30 days"
+    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/png "access plus 30 days"
+</IfModule>

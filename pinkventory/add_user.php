@@ -1,6 +1,6 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
+require_once 'includes/layout.php';
 require_admin();
 
 $genders = ['Male', 'Female', 'Other'];
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("ssss", $email, $fullName, $gender, $hashedPassword);
             $stmt->execute();
             flash('success', $fullName . ' was added. They can now sign in with ' . $email . '.');
-            redirect('admin_dashboard.php');
+            redirect('users.php');
         }
     }
 }
@@ -55,7 +55,7 @@ layout_start('Add user', 'add-user');
 <div class="page-head">
     <div>
         <nav class="breadcrumb" aria-label="Breadcrumb">
-            <a href="admin_dashboard.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Add user</span>
+            <a href="users.php">Users</a> <?php echo icon('chevron-right'); ?> <span>Add user</span>
         </nav>
         <h1>Add user</h1>
         <p>Create an account for someone on your team.</p>
@@ -130,7 +130,7 @@ layout_start('Add user', 'add-user');
     </div>
 
     <div class="form-actions">
-        <a href="admin_dashboard.php" class="btn btn-secondary">Cancel</a>
+        <a href="users.php" class="btn btn-secondary">Cancel</a>
         <button type="submit" class="btn btn-primary"><?php echo icon('user-plus'); ?> Add user</button>
     </div>
 </form>

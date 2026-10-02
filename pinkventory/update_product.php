@@ -1,7 +1,7 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
-require_login();
+require_once 'includes/layout.php';
+require_admin();
 
 $errors = [];
 $id = filter_var($_POST['id'] ?? $_GET['id'] ?? null, FILTER_VALIDATE_INT);
@@ -69,6 +69,6 @@ layout_start('Edit ' . $item['product_name'], 'inventory');
     </form>
 </div>
 
-<?php include 'product_form.php'; ?>
+<?php include 'includes/product_form.php'; ?>
 
 <?php layout_end(['product.js']); ?>

@@ -1,7 +1,7 @@
 <?php
 require_once 'bootstrap.php';
-require_once 'layout.php';
-require_login();
+require_once 'includes/layout.php';
+require_admin();
 
 const PER_PAGE = 10;
 

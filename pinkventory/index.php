@@ -21,20 +21,20 @@ $signedIn = is_user() || is_admin();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pinkventory · Inventory management made simple</title>
-    <meta name="description" content="Pinkventory is a simple inventory and checkout system for small shops: track stock in real time, get low-stock alerts and sell with barcode checkout.">
-    <link rel="icon" type="image/png" href="pinkventory-logo.png">
+    <meta name="description" content="Pinkventory is a simple inventory and checkout system for small shops: track stock in real time, get low-stock alerts and let customers shop online.">
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="<?php echo asset('landing.css'); ?>">
-    <script src="<?php echo asset('landing.js'); ?>"></script>
+    <link rel="stylesheet" href="<?php echo asset('assets/css/landing.css'); ?>">
+    <script src="<?php echo asset('assets/js/landing.js'); ?>"></script>
 </head>
 <body>
 
 <header class="site-nav" id="siteNav">
     <div class="wrap nav-inner">
         <a href="index.php" class="brand">
-            <img src="pinkventory-logo.png" alt="">
+            <img src="assets/img/logo.png" alt="">
             Pinkventory
         </a>
 
@@ -159,9 +159,9 @@ $signedIn = is_user() || is_admin();
                     <p>Add, edit and remove products with categories, prices and stock levels that update instantly.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><?php echo icon('scan-barcode'); ?></span>
-                    <h3>Barcode checkout</h3>
-                    <p>Scan or type a barcode to build a cart, with subtotal, tax and total worked out for you.</p>
+                    <span class="ic"><?php echo icon('shopping-cart'); ?></span>
+                    <h3>Online storefront</h3>
+                    <p>Customers browse your products, fill a cart and check out, with subtotal, tax and total worked out for them.</p>
                 </article>
                 <article class="feature reveal">
                     <span class="ic"><?php echo icon('bell-ring'); ?></span>
@@ -207,7 +207,7 @@ $signedIn = is_user() || is_admin();
                 </li>
                 <li class="step reveal">
                     <h3>Sell and restock</h3>
-                    <p>Ring up sales at checkout and use low-stock alerts to reorder at the right time.</p>
+                    <p>Customers shop from your live stock while low-stock alerts tell you when to reorder.</p>
                 </li>
             </ol>
         </div>
@@ -232,7 +232,7 @@ $signedIn = is_user() || is_admin();
 <footer class="site-footer">
     <div class="wrap footer-inner">
         <a href="index.php" class="brand">
-            <img src="pinkventory-logo.png" alt="">
+            <img src="assets/img/logo.png" alt="">
             Pinkventory
         </a>
         <nav class="footer-links" aria-label="Footer">

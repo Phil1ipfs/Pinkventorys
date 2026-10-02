@@ -1,37 +1,62 @@
 # Pinkventory
 
-Inventory management and retail checkout system built with plain PHP and MySQL.
+Inventory management and online storefront built with plain PHP and MySQL.
+
+## Roles
+
+- **Customers** (`users` table) sign up and use the storefront: Home, Shop, product pages, Cart, Checkout, Profile.
+- **Admins** (`admin` table) manage the store: Dashboard, Inventory (add/edit/delete products), Users, Add admin, Profile.
+
+Customers cannot open admin pages or call admin actions. Admins are sent to their dashboard if they open customer pages.
 
 ## Project layout
 
 ```
-pinkventory/            ← web root (upload the contents of this folder)
-  bootstrap.php         shared setup: config, DB, session, CSRF, auth helpers
-  config.example.php    configuration template → copy to config.php
-  .htaccess             blocks config/internal files, disables directory listing
-  index.php             public landing page
-  login.php             sign in (user + admin) / sign up
+pinkventory/                ← web root (upload the contents of this folder)
+  bootstrap.php             shared setup: config, DB, session, CSRF, auth + helpers
+  config.example.php        configuration template → copy to config.php
+  .htaccess                 blocks config/internal files, caches assets
+  index.php                 public landing page
+  login.php                 log in (customer + admin) / sign up
   logout.php
-  homepage.php          dashboard            (signed-in users and admins)
-  inventory.php         product list         (signed-in users and admins)
+  profile.php               account details + change password (both roles)
+
+  Customer storefront
+  homepage.php              home: welcome, new arrivals, categories
+  shop.php                  product grid with search, filters, sorting, pages
+  product.php               product details + add to cart
+  cart.php                  cart (re-priced from the database on every visit)
+  Checkout.php              checkout review (placing orders needs migration 001)
+
+  Admin
+  admin_dashboard.php       overview: stock stats, value by category, alerts, activity
+  inventory.php             product table with search, filters, sorting, pages
   add_product.php / update_product.php / delete_product.php
-  Checkout.php          barcode checkout     (signed-in users and admins)
-  search_api.php        JSON product search (navbar suggestions + checkout lookup)
-  admin_dashboard.php   user management      (admins only)
+  users.php                 customer accounts
   add_user.php / update_user.php / delete_user.php
-  Admin.php             create admin accounts (first admin, then admins only)
-  layout.php            shared app shell: sidebar, top bar, search, toasts, dialogs
-  product_form.php      product form shared by add/update product
-  app.css               design system for every signed-in page
-  app.js                shared behaviour: navigation, search, toasts, dialogs, idle sign-out
-  inventory.js, product.js, checkout.js, users.js   page-specific behaviour
-  landing.css/.js, auth.css/.js   landing page and sign-in/sign-up/admin-setup
-  icons.svg             icon sprite (Lucide icons, ISC licence) - only the icons used
-  pinkventory-logo.png  logo
+  Admin.php                 create admin accounts (first admin, then admins only)
+
+  search_api.php            JSON: search suggestions, product lookup, cart re-pricing
+
+  includes/                 server-side only (blocked from the web)
+    layout.php              app shell: sidebar, top bar, search, toasts, dialogs
+    store.php               storefront components (product cards, cart buttons)
+    product_form.php        product form shared by add/update product
+  assets/
+    css/pinkventory.css     design system for every signed-in page
+    css/auth.css            log in / sign up / first-admin pages
+    css/landing.css         landing page
+    js/app.js               shared UI: navigation, search, toasts, dialogs, cart, idle sign-out
+    js/store.js             storefront: filters, quantity steppers, cart + checkout pages
+    js/inventory.js, product.js, users.js, auth.js, landing.js
+    img/icons.svg           icon sprite (Lucide icons, ISC licence) - only the icons used
+    img/logo.png            logo
+    img/illus-signin.svg, illus-signup.svg   sign-in / sign-up illustrations
 database/
-  schema.sql            tables, keys and indexes (import into a new database)
-  sample_data.sql       optional demo products
-  migrate_existing.sql  one-off clean-up for databases created before schema.sql
+  schema.sql                tables, keys and indexes (import into a new database)
+  sample_data.sql           optional demo products
+  migrate_existing.sql      one-off clean-up for databases created before schema.sql
+  migrations/001_add_orders.sql   PROPOSED orders tables - not yet applied
 ```
 
 ## Requirements
@@ -109,6 +134,7 @@ autoindex off;
 
 ## Known limitations
 
-- There is no sales table yet, so the dashboard shows inventory figures only (its "Sales & revenue" card says so).
-- Checkout looks up real products and builds a cart, but card/cash payments aren't connected and completing a sale doesn't change stock.
+- Orders are not saved yet: `database/migrations/001_add_orders.sql` is proposed but not applied. Until then the cart lives in the browser, "Place order" is disabled, and the admin "Sales overview" card says it is not set up.
+- Products have no photo column, so each product is shown with a category icon.
+- No "remember me", password reset or social login.
 - The admin login has no failed-attempt lockout; only the user login does. Use a strong admin password.

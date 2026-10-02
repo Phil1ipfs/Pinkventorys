@@ -228,7 +228,7 @@
                 var a = document.createElement('a');
                 a.id = 'suggest-' + i;
                 a.setAttribute('role', 'option');
-                a.href = 'inventory.php?q=' + encodeURIComponent(name);
+                a.href = (searchForm.dataset.target || 'inventory.php') + '?q=' + encodeURIComponent(name);
                 a.innerHTML = icon('package', 'icon-sm');
                 a.appendChild(document.createTextNode(name));
                 li.appendChild(a);
@@ -347,5 +347,76 @@
         resetIdle();
     }
 
-    window.PV = { toast: toast, confirm: confirmAction, icon: icon, csrfToken: csrfToken };
+    /* ---------- Customer cart ----------
+       Stored in this browser per customer (localStorage). Lines keep only the
+       product id and quantity plus a name/price snapshot for display; the cart
+       and checkout pages always re-read current prices and stock from the server. */
+
+    var cartKey = body.dataset.cartKey;
+
+    var cart = {
+        read: function () {
+            if (!cartKey) return [];
+            try {
+                var lines = JSON.parse(localStorage.getItem(cartKey) || '[]');
+                return Array.isArray(lines) ? lines.filter(function (l) { return l && l.id > 0 && l.qty > 0; }) : [];
+            } catch (e) {
+                return [];
+            }
+        },
+        write: function (lines) {
+            if (!cartKey) return;
+            try { localStorage.setItem(cartKey, JSON.stringify(lines)); } catch (e) { /* storage unavailable */ }
+            cart.updateBadges();
+        },
+        count: function () {
+            return cart.read().reduce(function (n, l) { return n + l.qty; }, 0);
+        },
+        // Adds qty of a product, never beyond its stock. Returns the quantity actually added.
+        add: function (product, qty) {
+            var lines = cart.read();
+            var line = lines.find(function (l) { return l.id === product.id; });
+            var current = line ? line.qty : 0;
+            var allowed = Math.max(0, Math.min(qty, product.stock - current));
+            if (allowed <= 0) return 0;
+            if (line) {
+                line.qty += allowed;
+                line.name = product.name;
+                line.price = product.price;
+            } else {
+                lines.push({ id: product.id, qty: allowed, name: product.name, price: product.price });
+            }
+            cart.write(lines);
+            return allowed;
+        },
+        clear: function () {
+            cart.write([]);
+        },
+        updateBadges: function () {
+            var n = cart.count();
+            document.querySelectorAll('[data-cart-count]').forEach(function (el) {
+                el.textContent = n > 99 ? '99+' : n;
+                el.hidden = n === 0;
+            });
+        }
+    };
+    cart.updateBadges();
+    window.addEventListener('storage', function (e) { if (e.key === cartKey) cart.updateBadges(); });
+
+    // "Add to cart" buttons anywhere: data-add-to-cart='{"id":1,"name":"…","price":9.5,"stock":3}'
+    document.addEventListener('click', function (e) {
+        var button = e.target.closest('[data-add-to-cart]');
+        if (!button || button.disabled) return;
+        var product = JSON.parse(button.dataset.addToCart);
+        var qtyInput = button.dataset.qtyFrom ? document.getElementById(button.dataset.qtyFrom) : null;
+        var qty = qtyInput ? Math.max(1, parseInt(qtyInput.value, 10) || 1) : 1;
+        var added = cart.add(product, qty);
+        if (added > 0) {
+            toast('success', (added > 1 ? added + ' × ' : '') + product.name + ' added to your cart.');
+        } else {
+            toast('info', 'You already have all ' + product.stock + ' available ' + product.name + ' in your cart.');
+        }
+    });
+
+    window.PV = { toast: toast, confirm: confirmAction, icon: icon, csrfToken: csrfToken, cart: cart };
 })();
