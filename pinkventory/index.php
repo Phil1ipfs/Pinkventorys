@@ -1,318 +1,249 @@
 <?php
-session_start([
-    'cookie_lifetime' => 86400, // Set session cookie lifetime to 1 day
-    'cookie_secure'   => true, // Ensure cookies are only sent over HTTPS
-    'cookie_httponly' => true, // Prevent JavaScript access to session cookies
-    'use_strict_mode' => true // Enable strict mode for sessions
-]);
+require_once 'bootstrap.php';
 
-require_once 'connect.php'; // Include database connection
-
-// Generate a CSRF token if it doesn't exist
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+// Old links pointed at index.php?action=signin|signup|logout; send them to the right place.
+$action = $_GET['action'] ?? null;
+if ($action === 'logout') {
+    redirect(logout_url());
+}
+if ($action === 'signup') {
+    redirect('login.php?action=signup');
+}
+if ($action !== null) {
+    redirect('login.php');
 }
 
-$mssge = "Account locked. Please try again after 1 minute.";
-$errors = [];
-
-// Determine the requested action (default to 'signin')
-$action = isset($_GET['action']) ? $_GET['action'] : 'signin';
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    // CSRF protection: Check if the submitted token matches the session token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die("CSRF token validation failed.");
-    }
-
-    if ($action == 'signin') {
-        // Process admin or user login based on input fields
-        $admin_username = filter_input(INPUT_POST, 'admin_username', FILTER_SANITIZE_STRING);
-        $admin_password = filter_input(INPUT_POST, 'admin_password', FILTER_SANITIZE_STRING);
-
-        if (isset($admin_username)) {
-            // Admin login process
-            $sql = "SELECT * FROM admin WHERE username = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $admin_username);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            if ($result->num_rows > 0) {
-                $admin = $result->fetch_assoc();
-
-                // Verify admin password
-                if (password_verify($admin_password, $admin['password'])) {
-                    $_SESSION['admin_username'] = $admin['username'];
-                    header("Location: admin_dashboard.php");
-                    exit();
-                } else {
-                    $error = "Incorrect admin username or password.";
-                }
-            } else {
-                $error = "Admin account not found.";
-            }
-        } else {
-            // User login process
-            $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-            $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
-
-            $sql = "SELECT *, TIMESTAMPDIFF(SECOND, last_failed_attempt, NOW()) AS time_since_last_fail FROM users WHERE email = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("s", $email);
-            $stmt->execute();
-            $result = $stmt->get_result();
-
-            if ($result->num_rows > 0) {
-                $user = $result->fetch_assoc();
-
-                // Check if account is locked due to multiple failed attempts
-                if ($user['failed_attempts'] >= 5 && $user['time_since_last_fail'] < 60) {
-                    $error = $mssge;
-                } else {
-                    // Verify user password
-                    if (password_verify($password, $user['password'])) {
-                        // Reset failed login attempts upon successful login
-                        $resetAttempts = "UPDATE users SET failed_attempts = 0, last_failed_attempt = NULL WHERE email = ?";
-                        $stmt = $conn->prepare($resetAttempts);
-                        $stmt->bind_param("s", $email);
-                        $stmt->execute();
-
-                        $_SESSION['email'] = $user['email'];
-                        header("Location: homepage.php");
-                        exit();
-                    } else {
-                        // Increment failed login attempts
-                        $failedAttempts = $user['failed_attempts'] + 1;
-                        $updateAttempts = "UPDATE users SET failed_attempts = ?, last_failed_attempt = NOW() WHERE email = ?";
-                        $stmt = $conn->prepare($updateAttempts);
-                        $stmt->bind_param("is", $failedAttempts, $email);
-                        $stmt->execute();
-
-                        // Show error message with remaining attempts
-                        $error = $failedAttempts >= 5 ? $mssge : "Incorrect email or password. Attempts left: " . (5 - $failedAttempts);
-                    }
-                }
-            } else {
-                $error = "Account not found.";
-            }
-        }
-    } elseif ($action == 'signup') {
-        // Handle user signup
-        $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
-        $fullname = filter_input(INPUT_POST, 'fullname', FILTER_SANITIZE_STRING);
-        $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
-        $repeat_password = filter_input(INPUT_POST, 'repeat_password', FILTER_SANITIZE_STRING);
-        $dob = filter_input(INPUT_POST, 'dob', FILTER_SANITIZE_STRING);
-        $gender = filter_input(INPUT_POST, 'gender', FILTER_SANITIZE_STRING);
-
-        // Validate password strength
-        if (strlen($password) < 8 || !preg_match("/[A-Z]/", $password) || !preg_match("/[0-9]/", $password)) {
-            $errors[] = "Password must be at least 8 characters long and include at least one uppercase letter and one number.";
-        }
-
-        // Ensure passwords match
-        if ($password !== $repeat_password) {
-            $errors[] = "Passwords do not match.";
-        }
-
-        // Check if email already exists
-        $checkEmail = "SELECT email FROM users WHERE email = ?";
-        $stmt = $conn->prepare($checkEmail);
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            $errors[] = "Email already exists.";
-        }
-
-        // Insert new user into the database if there are no errors
-        if (empty($errors)) {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "INSERT INTO users (email, fullname, password, dob, gender) VALUES (?, ?, ?, ?, ?)";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssss", $email, $fullname, $hashed_password, $dob, $gender);
-            if ($stmt->execute()) {
-                header("Location: index.php?action=signin");
-                exit();
-            } else {
-                $errors[] = "Error creating account.";
-            }
-        }
-    } elseif ($action == 'logout') {
-        // Destroy session and redirect to login page on logout
-        session_destroy();
-        header("Location: index.php");
-        exit();
-    }
-}
+$signedIn = is_user() || is_admin();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title><?php echo $action == 'signin' ? 'Sign In' : ($action == 'signup' ? 'Sign Up' : 'Update Info'); ?></title>
-    <link rel="stylesheet" href="style.css?v=<?php echo time(); ?>">
-    <meta http-equiv="Content-Security-Policy" content="
-">
-
-    <script>
-        function toggleForm(action) {
-            document.querySelector('.page-container').classList.add('fade-out');
-            setTimeout(function() {
-                window.location.href = 'index.php?action=' + action;
-            }, 500);
-        }
-
-        function showLoginForm(type) {
-            const userForm = document.getElementById('userLoginForm');
-            const adminForm = document.getElementById('adminLoginForm');
-            const userBtn = document.getElementById('userBtn');
-            const adminBtn = document.getElementById('adminBtn');
-
-            if (type === 'user') {
-                userForm.style.display = 'flex';
-                adminForm.style.display = 'none';
-                userBtn.classList.add('active');
-                adminBtn.classList.remove('active');
-            } else {
-                userForm.style.display = 'none';
-                adminForm.style.display = 'flex';
-                adminBtn.classList.add('active');
-                userBtn.classList.remove('active');
-            }
-        }
-    </script>
+    <title>Pinkventory · Inventory management made simple</title>
+    <meta name="description" content="Pinkventory is a simple inventory and checkout system for small shops: track stock in real time, get low-stock alerts and let customers shop online.">
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="<?php echo asset('assets/css/landing.css'); ?>">
+    <script src="<?php echo asset('assets/js/landing.js'); ?>"></script>
 </head>
 <body>
-    <div class="page-container">
-        <?php if ($action == 'signin'): ?>
-            <div class="left-panel">
-                <h1>Welcome back!</h1>
-                <p>To keep connected, please login with your personal info</p>
-                <button onclick="toggleForm('signup')" id="signupBtn">Sign up</button>
-            </div>
-            <div class="right-panel">
-            <div class="header">
-                    <div class="brand">
-                        <img src="BARBIE-removebg-preview 2.png" alt="Pinkventory Logo" class="logo">
-                        <span class="brand-name">Pinkventory</span>
-                    </div>
-                </div>
-                <h1 class ="loginH1">Log in to your account</h1>
-                <p class="login-description">
-        Pinkventory is a smart inventory management solution designed for effortless tracking, organization, and checkout. With real-time stock monitoring, easy product management, and insightful analytics, it helps streamline operations for businesses and individuals. Stay organized with Pinkventory!
-    </p>
-                <div class="login-type-dropdown">
-                    <select id="loginType" onchange="showLoginForm(this.value)" class="login-dropdown">
-                        <option value="user" selected>User</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <?php if (isset($error)) echo "<div class='alert alert-danger'>$error</div>"; ?>
-                
-                <form method="post" action="index.php?action=signin" id="userLoginForm">
-                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    <input type="email" name="email" placeholder="Email" required>
-                    <input type="password" name="password" placeholder="Password" required>
-                    <button type="submit">Sign in</button>
-                </form>
 
-                <form method="post" action="index.php?action=signin" id="adminLoginForm" style="display: none;">
-                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    <input type="text" name="admin_username" placeholder="Admin Username" required>
-                    <input type="password" name="admin_password" placeholder="Admin Password" required>
-                    <button type="submit">Admin Sign in</button>
-                    <p style="margin-top: 10px; text-align: center;">
-                        <a href="Admin.php?action=create" class="create-admin-link">Create Admin Account</a>
-                    </p>
-                </form>
-            </div>
-        <?php elseif ($action == 'signup'): ?>
-            <div class="right-panel">
-            <div class="header">
-                    <div class="brand">
-                        <img src="BARBIE-removebg-preview 2.png" alt="Pinkventory Logo" class="logo">
-                        <span class="brand-name">Pinkventory</span>
-                    </div>
-                </div>
-                <h1>Create Account</h1>
-                <?php if (!empty($errors)) foreach ($errors as $err) echo "<div class='alert alert-danger'>$err</div>"; ?>
-                <form method="post" action="index.php?action=signup">
-                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    <input type="email" name="email" placeholder="Your Email" required>
-                    <input type="text" name="fullname" placeholder="Your Name" required>
-                    <input type="password" name="password" placeholder="Create Password" required>
-                    <input type="password" name="repeat_password" placeholder="Repeat Password" required>
-                    <input type="date" name="dob" required>
-                    <label>
-                        <input type="radio" name="gender" value="Male" required> Male
-                    </label>
-                    <label>
-                        <input type="radio" name="gender" value="Female" required> Female
-                    </label>
-                    <button type="submit" class="create-account">Sign Up</button>
-                </form>
-            </div>
-            <div class="left-panel">
-                <h1>Hello, Friend!</h1>
-                <p>Enter your personal details and start your journey with us</p>
-                <button onclick="toggleForm('signin')" id="signupBtn">Sign In</button>
-            </div>
-        <?php endif; ?>
+<header class="site-nav" id="siteNav">
+    <div class="wrap nav-inner">
+        <a href="index.php" class="brand">
+            <img src="assets/img/logo.png" alt="">
+            Pinkventory
+        </a>
+
+        <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
+            <?php echo icon('menu'); ?>
+        </button>
+
+        <nav class="nav-links" aria-label="Main">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+        </nav>
+
+        <div class="nav-actions">
+            <?php if ($signedIn): ?>
+                <a href="<?php echo e(logout_url()); ?>" class="btn btn-ghost btn-sm">Sign out</a>
+                <a href="<?php echo home_url(); ?>" class="btn btn-primary btn-sm">Open dashboard</a>
+            <?php else: ?>
+                <a href="login.php" class="btn btn-ghost btn-sm">Sign in</a>
+                <a href="login.php?action=signup" class="btn btn-primary btn-sm">Get started</a>
+            <?php endif; ?>
+        </div>
     </div>
+</header>
 
+<main>
+    <!-- Hero -->
+    <section class="hero">
+        <div class="wrap hero-grid">
+            <div class="hero-copy">
+                <span class="eyebrow"><span class="dot"><?php echo icon('sparkles'); ?></span> Inventory management, made pretty</span>
+                <h1>Know your stock. <span class="accent">Sell with confidence.</span></h1>
+                <p>Pinkventory keeps your products, stock levels and checkout in one tidy place, so you always know what's on the shelf and what needs reordering.</p>
 
-    <script> 
-        const express = require('express');
-            const helmet = require('helmet');
+                <div class="hero-ctas">
+                    <?php if ($signedIn): ?>
+                        <a href="<?php echo home_url(); ?>" class="btn btn-primary">Open your dashboard <?php echo icon('arrow-right'); ?></a>
+                    <?php else: ?>
+                        <a href="login.php?action=signup" class="btn btn-primary">Create free account <?php echo icon('arrow-right'); ?></a>
+                        <a href="login.php" class="btn btn-ghost">Sign in</a>
+                    <?php endif; ?>
+                </div>
 
-            const app = express();
+                <ul class="hero-note">
+                    <li><?php echo icon('check'); ?> Free to get started</li>
+                    <li><?php echo icon('check'); ?> Works on any device</li>
+                    <li><?php echo icon('check'); ?> Set up in minutes</li>
+                </ul>
+            </div>
 
-            app.use(
-            helmet.contentSecurityPolicy({
-                directives: {
-                defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'", "https://trusted.cdn.com"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
-                imgSrc: ["'self'", "data:"],
-                fontSrc: ["'self'", "https://fonts.gstatic.com"],
-                frameSrc: ["'none'"],
-                },
-            })
-            );
+            <div class="hero-visual" aria-hidden="true">
+                <div class="mock">
+                    <div class="mock-bar"><span></span><span></span><span></span><em>Pinkventory · Dashboard</em></div>
+                    <div class="mock-body">
+                        <div class="mock-stats">
+                            <div class="mock-stat"><small>Active items</small><strong>1,248</strong><span class="up">+32 this week</span></div>
+                            <div class="mock-stat"><small>Low stock</small><strong>6</strong><span class="down">Needs reorder</span></div>
+                            <div class="mock-stat"><small>Today's sales</small><strong>$2,850</strong><span class="up">+20.1%</span></div>
+                        </div>
+                        <div class="mock-panels">
+                            <div class="mock-card">
+                                <h4>Weekly sales</h4>
+                                <div class="bars">
+                                    <span style="--h: 45%"></span>
+                                    <span style="--h: 62%"></span>
+                                    <span style="--h: 38%"></span>
+                                    <span style="--h: 74%"></span>
+                                    <span style="--h: 58%"></span>
+                                    <span style="--h: 92%"></span>
+                                    <span style="--h: 70%"></span>
+                                </div>
+                                <div class="bar-labels"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                            </div>
+                            <div class="mock-card">
+                                <h4>Stock levels</h4>
+                                <ul class="stock-list">
+                                    <li>Pink Hoodie <span class="tag tag-ok">In stock</span></li>
+                                    <li>Phone Charger <span class="tag tag-low">Low</span></li>
+                                    <li>Wireless Earbuds <span class="tag tag-ok">In stock</span></li>
+                                    <li>Denim Jacket <span class="tag tag-out">Out</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            app.listen(3000, () => console.log('Server running on port 3000'));
+                <div class="float-card float-a">
+                    <span class="ic"><?php echo icon('package-check'); ?></span>
+                    <div><strong>Stock updated</strong><small>Pink Hoodie +24</small></div>
+                </div>
+                <div class="float-card float-b">
+                    <span class="ic"><?php echo icon('bell-ring'); ?></span>
+                    <div><strong>Low-stock alert</strong><small>Phone Charger · 6 left</small></div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    </script>
+    <!-- Benefits strip -->
+    <section class="strip" aria-label="Highlights">
+        <div class="wrap">
+            <ul>
+                <li><?php echo icon('store'); ?> Built for small shops</li>
+                <li><?php echo icon('smartphone'); ?> Desktop, tablet &amp; phone</li>
+                <li><?php echo icon('lock'); ?> Secure accounts &amp; roles</li>
+            </ul>
+        </div>
+    </section>
 
-<script> 
+    <!-- Features -->
+    <section class="section" id="features">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <span class="kicker">Features</span>
+                <h2>Everything you need to run the stockroom</h2>
+                <p>From the first product you add to the sale at the counter, Pinkventory keeps it all in sync.</p>
+            </div>
 
-const express = require('express');
-const helmet = require('helmet');
+            <div class="features">
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('package'); ?></span>
+                    <h3>Live inventory</h3>
+                    <p>Add, edit and remove products with categories, prices and stock levels that update instantly.</p>
+                </article>
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('shopping-cart'); ?></span>
+                    <h3>Online storefront</h3>
+                    <p>Customers browse your products, fill a cart and check out, with subtotal, tax and total worked out for them.</p>
+                </article>
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('bell-ring'); ?></span>
+                    <h3>Low-stock alerts</h3>
+                    <p>See which items are running low on your dashboard before customers find empty shelves.</p>
+                </article>
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('bar-chart-3'); ?></span>
+                    <h3>Sales dashboard</h3>
+                    <p>Revenue, orders and average order value at a glance, with clear weekly trend charts.</p>
+                </article>
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('search'); ?></span>
+                    <h3>Instant search</h3>
+                    <p>Find any product in seconds with suggestions that appear as you type.</p>
+                </article>
+                <article class="feature reveal">
+                    <span class="ic"><?php echo icon('shield-check'); ?></span>
+                    <h3>Secure by design</h3>
+                    <p>Separate user and admin roles, encrypted passwords and protection against common attacks.</p>
+                </article>
+            </div>
+        </div>
+    </section>
 
-const app = express();
-app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://trusted.cdn.com"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-    },
-  })
-);
+    <!-- How it works -->
+    <section class="section how" id="how">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <span class="kicker">How it works</span>
+                <h2>Up and running in three steps</h2>
+                <p>No setup fees, no complicated configuration.</p>
+            </div>
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+            <ol class="steps">
+                <li class="step reveal">
+                    <h3>Create your account</h3>
+                    <p>Sign up with your email in under a minute and land straight on your dashboard.</p>
+                </li>
+                <li class="step reveal">
+                    <h3>Add your products</h3>
+                    <p>Enter your items with category, price and quantity. Status badges keep things readable.</p>
+                </li>
+                <li class="step reveal">
+                    <h3>Sell and restock</h3>
+                    <p>Customers shop from your live stock while low-stock alerts tell you when to reorder.</p>
+                </li>
+            </ol>
+        </div>
+    </section>
 
-</script>
+    <!-- Call to action -->
+    <section class="cta">
+        <div class="wrap">
+            <div class="cta-box reveal">
+                <h2>Ready to get organised?</h2>
+                <p>Join Pinkventory today and spend less time counting boxes and more time selling.</p>
+                <?php if ($signedIn): ?>
+                    <a href="<?php echo home_url(); ?>" class="btn btn-light">Open your dashboard <?php echo icon('arrow-right'); ?></a>
+                <?php else: ?>
+                    <a href="login.php?action=signup" class="btn btn-light">Create free account <?php echo icon('arrow-right'); ?></a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+</main>
 
+<footer class="site-footer">
+    <div class="wrap footer-inner">
+        <a href="index.php" class="brand">
+            <img src="assets/img/logo.png" alt="">
+            Pinkventory
+        </a>
+        <nav class="footer-links" aria-label="Footer">
+            <a href="#features">Features</a>
+            <a href="#how">How it works</a>
+            <a href="login.php">Sign in</a>
+            <a href="login.php?action=signup">Create account</a>
+        </nav>
+        <p class="copyright">© <?php echo date('Y'); ?> Pinkventory. All rights reserved.</p>
+    </div>
+</footer>
 
 </body>
 </html>

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 250" role="img" aria-label="Laptop showing a shopping cart, surrounded by boxes and a plant">
+  <defs>
+    <linearGradient id="su-screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#ffe9ef"/>
+    </linearGradient>
+    <linearGradient id="su-base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f6d5df"/>
+    </linearGradient>
+    <linearGradient id="su-box" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd2c2"/>
+      <stop offset="1" stop-color="#f4a99a"/>
+    </linearGradient>
+    <linearGradient id="su-pink" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7b9c"/>
+      <stop offset="1" stop-color="#e6386a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="172" cy="228" rx="150" ry="14" fill="#c93a64" opacity=".18"/>
+  <!-- boxes -->
+  <g>
+    <rect x="232" y="96" width="74" height="62" rx="6" fill="url(#su-box)"/>
+    <rect x="262" y="96" width="14" height="62" fill="#fbe1d6" opacity=".8"/>
+    <rect x="244" y="154" width="86" height="70" rx="6" fill="url(#su-box)"/>
+    <rect x="279" y="154" width="16" height="70" fill="#fbe1d6" opacity=".8"/>
+    <rect x="250" y="60" width="54" height="40" rx="5" fill="#ffc9b8"/>
+    <rect x="270" y="60" width="12" height="40" fill="#fde6dc" opacity=".8"/>
+  </g>
+  <!-- clipboard -->
+  <g transform="rotate(8 268 120)">
+    <rect x="236" y="70" width="64" height="86" rx="8" fill="#fff"/>
+    <rect x="256" y="64" width="24" height="12" rx="4" fill="#f35578"/>
+    <g fill="#f35578"><circle cx="250" cy="96" r="4"/><circle cx="250" cy="114" r="4"/><circle cx="250" cy="132" r="4"/></g>
+    <g fill="#f6c9d6"><rect x="260" y="93" width="30" height="6" rx="3"/><rect x="260" y="111" width="26" height="6" rx="3"/><rect x="260" y="129" width="30" height="6" rx="3"/></g>
+  </g>
+  <!-- laptop screen -->
+  <rect x="78" y="58" width="168" height="118" rx="12" fill="#f6c3d2"/>
+  <rect x="86" y="66" width="152" height="102" rx="8" fill="url(#su-screen)"/>
+  <rect x="134" y="80" width="56" height="48" rx="12" fill="url(#su-pink)"/>
+  <g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M146 92h6l6 20h20l4-14h-26"/>
+  </g>
+  <circle cx="160" cy="118" r="3" fill="#fff"/>
+  <circle cx="174" cy="118" r="3" fill="#fff"/>
+  <rect x="112" y="138" width="100" height="8" rx="4" fill="#f9d3de"/>
+  <rect x="126" y="152" width="72" height="8" rx="4" fill="#fbe2ea"/>
+  <!-- laptop base -->
+  <path d="M58 180h208l-14 20H72z" fill="url(#su-base)"/>
+  <rect x="146" y="182" width="32" height="5" rx="2.5" fill="#efb8c9"/>
+  <!-- plant -->
+  <g>
+    <path d="M44 226h40l-6-38H50z" fill="#fff"/>
+    <path d="M50 188h28l-1 6H51z" fill="#f6dbe3"/>
+    <path d="M64 188c-2-22-14-34-28-38 4 16 12 30 28 38z" fill="#5fbf8a"/>
+    <path d="M64 188c4-26 18-40 34-42-4 18-16 34-34 42z" fill="#4aa874"/>
+    <path d="M64 188c-1-18 4-34 12-46 4 16 0 32-12 46z" fill="#73cf99"/>
+  </g>
+  <!-- sparkles -->
+  <g fill="#fff" opacity=".9">
+    <circle cx="70" cy="44" r="4"/><circle cx="300" cy="40" r="3"/><circle cx="40" cy="120" r="2.5"/>
+  </g>
+</svg>
