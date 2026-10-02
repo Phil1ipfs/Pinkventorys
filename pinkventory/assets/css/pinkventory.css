@@ -3241,3 +3241,241 @@ a.sidebar-user:hover {
         display: none;
     }
 }
+
+/* ==========================================================================
+   Orders
+   ========================================================================== */
+
+.badge-info {
+    background: var(--info-50);
+    color: var(--info-700);
+}
+
+.section-gap {
+    margin-bottom: 20px;
+}
+
+.alert-flat {
+    margin: 0;
+}
+
+/* Sales overview: KPI strip + daily revenue bars (one hue, baseline at 0) */
+.sales-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.sales-kpis div {
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    background: var(--surface-2);
+}
+
+.sales-kpis span {
+    display: block;
+    font-size: 12px;
+    color: var(--ink-500);
+}
+
+.sales-kpis strong {
+    font-family: var(--font-display);
+    font-size: 18px;
+}
+
+.sales-empty {
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.vbars {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: end;
+    gap: 6px;
+    height: 150px;
+    list-style: none;
+    border-bottom: 1px solid var(--line-strong);
+}
+
+.vbars li {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+    border-radius: 6px 6px 0 0;
+    outline-offset: 2px;
+    cursor: default;
+}
+
+.vbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 100%;
+}
+
+.vbar span {
+    display: block;
+    width: min(24px, 100%);
+    min-height: 2px;
+    border-radius: 4px 4px 0 0;
+    background: var(--brand-600);
+    transform-origin: bottom;
+    animation: grow-y 0.7s var(--ease) both;
+}
+
+.vbars li:hover .vbar span,
+.vbars li:focus-visible .vbar span {
+    background: var(--brand-800);
+}
+
+.vbar-label {
+    margin-top: 6px;
+    margin-bottom: -22px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-500);
+    font-variant-numeric: tabular-nums;
+}
+
+.vbars + * {
+    margin-top: 26px;
+}
+
+@keyframes grow-y {
+    from {
+        transform: scaleY(0);
+    }
+}
+
+/* Order status timeline */
+.timeline {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    list-style: none;
+    counter-reset: step;
+}
+
+.timeline li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-500);
+}
+
+.timeline li::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: var(--line-strong);
+}
+
+.timeline li:first-child::before {
+    display: none;
+}
+
+.timeline li.done::before {
+    background: var(--brand-600);
+}
+
+.timeline .dot {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--line-strong);
+    border-radius: 50%;
+    background: #fff;
+    color: #fff;
+}
+
+.timeline li.done {
+    color: var(--ink-900);
+}
+
+.timeline li.done .dot {
+    border-color: var(--brand-600);
+    background: var(--brand-600);
+}
+
+.timeline li.current .dot {
+    box-shadow: 0 0 0 5px var(--brand-100);
+}
+
+/* Order placed confirmation */
+.placed-banner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+    border: 1px solid #c6efd5;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #ecfdf3, #ffffff);
+}
+
+.placed-banner > div {
+    flex: 1;
+    min-width: 220px;
+}
+
+.placed-banner h1 {
+    font-size: 22px;
+}
+
+.placed-banner p {
+    margin-top: 4px;
+    color: var(--ink-600);
+}
+
+.placed-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--ok-mark);
+    color: #fff;
+}
+
+.placed-icon .icon {
+    width: 28px;
+    height: 28px;
+}
+
+@media (max-width: 760px) {
+    .sales-kpis {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vbars {
+        gap: 3px;
+        height: 120px;
+    }
+
+    .vbar-label {
+        font-size: 10px;
+    }
+
+    .vbars li:nth-child(even) .vbar-label {
+        visibility: hidden;
+    }
+
+    .placed-banner .btn {
+        width: 100%;
+    }
+}

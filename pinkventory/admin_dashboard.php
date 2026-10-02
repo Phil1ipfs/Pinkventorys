@@ -1,6 +1,7 @@
 <?php
 require_once 'bootstrap.php';
 require_once 'includes/layout.php';
+require_once 'includes/orders.php';
 require_admin();
 
 $fullname = current_display_name($conn);
@@ -51,6 +52,48 @@ $statusParts = [
     ['Out of stock', $out, 'var(--danger-mark)', 'out-of-stock'],
 ];
 
+// Orders & revenue (only once the orders migration has been applied).
+// Revenue counts every order that wasn't cancelled.
+$ordering = orders_enabled($conn);
+$orderStats = ['orders' => 0, 'revenue' => 0.0, 'pending' => 0];
+$salesDays = [];
+$recentOrders = [];
+$periodRevenue = 0.0;
+$periodOrders = 0;
+const SALES_DAYS = 14;
+if ($ordering) {
+    $row = $conn->query("SELECT COUNT(*) AS orders,
+            COALESCE(SUM(CASE WHEN " . revenue_sql() . " THEN total END), 0) AS revenue,
+            COALESCE(SUM(status = 'pending'), 0) AS pending
+        FROM orders")->fetch_assoc();
+    $orderStats = ['orders' => (int) $row['orders'], 'revenue' => (float) $row['revenue'], 'pending' => (int) $row['pending']];
+
+    // Daily revenue for the last SALES_DAYS days (days without orders show as 0).
+    // Use the database's date so the days line up with created_at whatever the PHP time zone.
+    $today = (string) $conn->query("SELECT CURDATE()")->fetch_row()[0];
+    $from = (new DateTime($today))->modify('-' . (SALES_DAYS - 1) . ' days');
+    for ($d = clone $from, $i = 0; $i < SALES_DAYS; $i++, $d->modify('+1 day')) {
+        $salesDays[$d->format('Y-m-d')] = ['revenue' => 0.0, 'orders' => 0, 'label' => $d->format('M j'), 'short' => $d->format('j')];
+    }
+    $fromSql = $from->format('Y-m-d 00:00:00');
+    $stmt = $conn->prepare("SELECT DATE(created_at) AS day, COUNT(*) AS orders, SUM(total) AS revenue
+        FROM orders WHERE created_at >= ? AND " . revenue_sql() . " GROUP BY DATE(created_at)");
+    $stmt->bind_param("s", $fromSql);
+    $stmt->execute();
+    foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $r) {
+        if (isset($salesDays[$r['day']])) {
+            $salesDays[$r['day']]['revenue'] = (float) $r['revenue'];
+            $salesDays[$r['day']]['orders'] = (int) $r['orders'];
+        }
+    }
+    $periodRevenue = array_sum(array_column($salesDays, 'revenue'));
+    $periodOrders = array_sum(array_column($salesDays, 'orders'));
+
+    $recentOrders = $conn->query("SELECT id, customer_name, status, total, created_at FROM orders
+        ORDER BY created_at DESC, id DESC LIMIT 5")->fetch_all(MYSQLI_ASSOC);
+}
+$maxDay = max(array_merge([0.01], array_column($salesDays, 'revenue')));
+
 layout_start('Dashboard', 'dashboard');
 ?>
 
@@ -76,16 +119,29 @@ layout_start('Dashboard', 'dashboard');
         <div class="stat-value num"><?php echo number_format((int) $totals['units']); ?></div>
         <div class="stat-meta">Units on hand</div>
     </div>
-    <div class="card stat">
-        <div class="stat-top">Inventory value <span class="stat-icon is-ok"><?php echo icon('wallet'); ?></span></div>
-        <div class="stat-value num"><?php echo money((float) $totals['value']); ?></div>
-        <div class="stat-meta">Stock on hand × price</div>
-    </div>
-    <a href="inventory.php?status=attention" class="card stat">
-        <div class="stat-top">Needs attention <span class="stat-icon is-warn"><?php echo icon('bell-ring'); ?></span></div>
-        <div class="stat-value num"><?php echo number_format($low + $out); ?></div>
-        <div class="stat-meta"><strong class="is-warn"><?php echo $low; ?> low</strong> · <strong class="is-danger"><?php echo $out; ?> out of stock</strong></div>
-    </a>
+    <?php if ($ordering): ?>
+        <a href="admin_orders.php" class="card stat">
+            <div class="stat-top">Total orders <span class="stat-icon is-warn"><?php echo icon('receipt'); ?></span></div>
+            <div class="stat-value num"><?php echo number_format($orderStats['orders']); ?></div>
+            <div class="stat-meta"><?php echo number_format($orderStats['pending']); ?> pending</div>
+        </a>
+        <a href="admin_orders.php" class="card stat">
+            <div class="stat-top">Total revenue <span class="stat-icon is-ok"><?php echo icon('wallet'); ?></span></div>
+            <div class="stat-value num"><?php echo money($orderStats['revenue']); ?></div>
+            <div class="stat-meta">Excludes cancelled orders</div>
+        </a>
+    <?php else: ?>
+        <div class="card stat">
+            <div class="stat-top">Inventory value <span class="stat-icon is-ok"><?php echo icon('wallet'); ?></span></div>
+            <div class="stat-value num"><?php echo money((float) $totals['value']); ?></div>
+            <div class="stat-meta">Stock on hand × price</div>
+        </div>
+        <a href="inventory.php?status=attention" class="card stat">
+            <div class="stat-top">Needs attention <span class="stat-icon is-warn"><?php echo icon('bell-ring'); ?></span></div>
+            <div class="stat-value num"><?php echo number_format($low + $out); ?></div>
+            <div class="stat-meta"><strong class="is-warn"><?php echo $low; ?> low</strong> · <strong class="is-danger"><?php echo $out; ?> out of stock</strong></div>
+        </a>
+    <?php endif; ?>
 </section>
 
 <div class="grid-2">
@@ -93,15 +149,41 @@ layout_start('Dashboard', 'dashboard');
         <div class="card-head">
             <div>
                 <h2 id="salesTitle">Sales overview</h2>
-                <p>Orders and revenue</p>
+                <p><?php echo $ordering ? 'Daily revenue, last ' . SALES_DAYS . ' days' : 'Orders and revenue'; ?></p>
             </div>
-            <span class="placeholder-tag"><?php echo icon('info', 'icon-sm'); ?> Not set up</span>
+            <?php if ($ordering): ?>
+                <a href="admin_orders.php" class="link-more">All orders <?php echo icon('arrow-right'); ?></a>
+            <?php else: ?>
+                <span class="placeholder-tag"><?php echo icon('info', 'icon-sm'); ?> Not set up</span>
+            <?php endif; ?>
         </div>
-        <div class="empty empty-sm">
-            <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
-            <h3>No sales data yet</h3>
-            <p>Orders aren't saved to the database yet, so there's no real revenue or order history to chart. This fills in once order saving is switched on.</p>
-        </div>
+        <?php if (!$ordering): ?>
+            <div class="empty empty-sm">
+                <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
+                <h3>No sales data yet</h3>
+                <p>Run the orders migration to switch on ordering. Revenue and order history will appear here.</p>
+            </div>
+        <?php else: ?>
+            <div class="card-body">
+                <div class="sales-kpis">
+                    <div><span>Revenue</span><strong class="num"><?php echo money($periodRevenue); ?></strong></div>
+                    <div><span>Orders</span><strong class="num"><?php echo number_format($periodOrders); ?></strong></div>
+                    <div><span>Avg. order</span><strong class="num"><?php echo $periodOrders ? money($periodRevenue / $periodOrders) : '—'; ?></strong></div>
+                </div>
+                <?php if ($periodOrders === 0): ?>
+                    <p class="muted sales-empty">No orders in the last <?php echo SALES_DAYS; ?> days.</p>
+                <?php endif; ?>
+                <ol class="vbars" aria-label="Daily revenue, last <?php echo SALES_DAYS; ?> days">
+                    <?php foreach ($salesDays as $day): $h = $day['revenue'] / $maxDay * 100; ?>
+                        <li tabindex="0" title="<?php echo e($day['label'] . ': ' . money($day['revenue']) . ' from ' . $day['orders'] . ' ' . ($day['orders'] === 1 ? 'order' : 'orders')); ?>"
+                            aria-label="<?php echo e($day['label'] . ': ' . money($day['revenue']) . ', ' . $day['orders'] . ' orders'); ?>">
+                            <span class="vbar"><span style="height: <?php echo round($h, 2); ?>%"></span></span>
+                            <span class="vbar-label"><?php echo e($day['short']); ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            </div>
+        <?php endif; ?>
     </section>
 
     <section class="card" aria-labelledby="statusTitle">
@@ -199,6 +281,39 @@ layout_start('Dashboard', 'dashboard');
         <?php endif; ?>
     </section>
 </div>
+
+<?php if ($ordering): ?>
+    <section class="card section-gap" aria-labelledby="recentOrdersTitle">
+        <div class="card-head">
+            <div>
+                <h2 id="recentOrdersTitle">Recent orders</h2>
+                <p>Latest customer orders</p>
+            </div>
+            <a href="admin_orders.php" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
+        </div>
+        <?php if (!$recentOrders): ?>
+            <div class="empty empty-sm">
+                <span class="empty-icon"><?php echo icon('receipt'); ?></span>
+                <h3>No orders yet</h3>
+                <p>Orders placed by customers will show up here.</p>
+            </div>
+        <?php else: ?>
+            <ul class="rows">
+                <?php foreach ($recentOrders as $o): ?>
+                    <li class="row-item">
+                        <span class="thumb"><?php echo icon('receipt'); ?></span>
+                        <div class="grow">
+                            <strong><a href="admin_order.php?id=<?php echo (int) $o['id']; ?>"><?php echo order_number((int) $o['id']); ?></a> · <?php echo e($o['customer_name']); ?></strong>
+                            <span><time datetime="<?php echo e($o['created_at']); ?>"><?php echo e(time_ago($o['created_at'])); ?></time></span>
+                        </div>
+                        <?php echo order_status_badge($o['status']); ?>
+                        <strong class="num"><?php echo money((float) $o['total']); ?></strong>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+<?php endif; ?>
 
 <div class="grid-2">
     <section class="card" aria-labelledby="recentTitle">

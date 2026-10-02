@@ -1,10 +1,11 @@
 <?php
 require_once 'bootstrap.php';
 require_once 'includes/layout.php';
-require_once 'includes/store.php';
+require_once 'includes/orders.php';
 require_user();
 
 $customer = current_user_row($conn);
+$ordering = orders_enabled($conn);
 
 layout_start('Checkout', 'cart');
 ?>
@@ -18,6 +19,15 @@ layout_start('Checkout', 'cart');
         <p>Confirm your details and review your order.</p>
     </div>
 </div>
+
+<form id="orderForm" action="place_order.php" method="post" data-order-form
+      data-confirm="You're about to place this order for the total shown. Payment is recorded only; nothing is charged online."
+      data-confirm-title="Place this order?" data-confirm-label="Place order" hidden>
+    <?php echo csrf_field(); ?>
+    <?php if ($ordering): ?>
+        <input type="hidden" name="checkout_nonce" value="<?php echo e(checkout_nonce()); ?>">
+    <?php endif; ?>
+</form>
 
 <div class="pos" data-cart-page data-checkout data-tax-rate="<?php echo STORE_TAX_RATE; ?>">
     <div class="stack">
@@ -67,11 +77,11 @@ layout_start('Checkout', 'cart');
             <div class="card-body">
                 <div class="choices choices-2" role="radiogroup" aria-labelledby="paymentTitle">
                     <label class="choice">
-                        <input type="radio" name="payment_method" value="cash" checked>
+                        <input type="radio" name="payment_method" value="cash" form="orderForm" checked>
                         <span><?php echo icon('banknote', 'icon-sm'); ?> Cash</span>
                     </label>
                     <label class="choice">
-                        <input type="radio" name="payment_method" value="card">
+                        <input type="radio" name="payment_method" value="card" form="orderForm">
                         <span><?php echo icon('credit-card', 'icon-sm'); ?> Card</span>
                     </label>
                 </div>
@@ -95,12 +105,16 @@ layout_start('Checkout', 'cart');
             <div class="summary-row"><span>Tax (<?php echo STORE_TAX_RATE * 100; ?>%)</span><span data-summary-tax>$0.00</span></div>
             <div class="summary-row summary-total"><span>Total</span><span data-summary-total>$0.00</span></div>
             <div class="pos-actions no-print">
-                <button type="button" class="btn btn-primary btn-lg" disabled aria-describedby="placeOrderNote"><?php echo icon('lock'); ?> Place order</button>
+                <button type="submit" form="orderForm" class="btn btn-primary btn-lg" disabled data-place-order<?php echo $ordering ? '' : ' data-ordering-off'; ?> aria-describedby="placeOrderNote"><?php echo icon('lock'); ?> Place order</button>
                 <button type="button" class="btn btn-secondary" data-print disabled><?php echo icon('printer'); ?> Print summary</button>
             </div>
             <p class="note no-print" id="placeOrderNote">
                 <?php echo icon('info'); ?>
-                <span>Online ordering isn't switched on yet, so orders can't be placed or saved. Your cart is kept on this device.</span>
+                <?php if ($ordering): ?>
+                    <span>Prices and stock are checked again when you place the order. Payment is recorded only; you pay on collection or delivery.</span>
+                <?php else: ?>
+                    <span>Online ordering isn't switched on yet, so orders can't be placed or saved. Your cart is kept on this device.</span>
+                <?php endif; ?>
             </p>
         </div>
     </aside>

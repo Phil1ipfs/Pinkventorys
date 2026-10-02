@@ -38,6 +38,11 @@
         input.addEventListener('change', clamp);
     });
 
+    // Order confirmation page: the order is saved, so empty the cart.
+    if (document.querySelector('[data-clear-cart]')) {
+        PV.cart.clear();
+    }
+
     /* ---------- Cart & checkout ---------- */
 
     var page = document.querySelector('[data-cart-page]');
@@ -200,6 +205,29 @@
         if (checkoutLink) checkoutLink.setAttribute('aria-disabled', String(!has));
         var printBtn = $('[data-print]');
         if (printBtn) printBtn.disabled = !has;
+        var placeBtn = $('[data-place-order]');
+        if (placeBtn) placeBtn.disabled = !has || placeBtn.hasAttribute('data-ordering-off');
+    }
+
+    // Place order: send each line's quantity and the price the customer is looking at.
+    // The server re-checks both against the database before saving anything.
+    var orderForm = document.querySelector('[data-order-form]');
+    if (orderForm) {
+        orderForm.addEventListener('submit', function () {
+            orderForm.querySelectorAll('[data-line]').forEach(function (el) { el.remove(); });
+            PV.cart.read().forEach(function (line) {
+                var p = products[line.id];
+                if (!p) return;
+                [['qty', line.qty], ['price', p.price.toFixed(2)]].forEach(function (pair) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'items[' + p.id + '][' + pair[0] + ']';
+                    input.value = pair[1];
+                    input.setAttribute('data-line', '');
+                    orderForm.appendChild(input);
+                });
+            });
+        });
     }
 
     var stored = PV.cart.read();

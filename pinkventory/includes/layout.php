@@ -25,6 +25,7 @@ function nav_groups(): array
             'Overview' => [
                 'dashboard' => ['admin_dashboard.php', 'layout-dashboard', 'Dashboard'],
                 'inventory' => ['inventory.php', 'package', 'Inventory'],
+                'orders'    => ['admin_orders.php', 'receipt', 'Orders'],
                 'users'     => ['users.php', 'users', 'Users'],
             ],
             'Manage' => [
@@ -39,6 +40,7 @@ function nav_groups(): array
             'home'    => ['homepage.php', 'home', 'Home'],
             'shop'    => ['shop.php', 'store', 'Shop'],
             'cart'    => ['cart.php', 'shopping-cart', 'Cart'],
+            'orders'  => ['orders.php', 'receipt', 'Orders'],
             'profile' => ['profile.php', 'user', 'Profile'],
         ],
     ];

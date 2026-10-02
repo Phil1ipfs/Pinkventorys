@@ -26,12 +26,16 @@ pinkventory/                ← web root (upload the contents of this folder)
   shop.php                  product grid with search, filters, sorting, pages
   product.php               product details + add to cart
   cart.php                  cart (re-priced from the database on every visit)
-  Checkout.php              checkout review (placing orders needs migration 001)
+  Checkout.php              checkout: review, payment method (recorded only), place order
+  place_order.php           places an order (transaction: re-check prices + stock, save, reduce stock)
+  orders.php / order.php    the customer's own order history and order details
 
   Admin
   admin_dashboard.php       overview: stock stats, value by category, alerts, activity
   inventory.php             product table with search, filters, sorting, pages
   add_product.php / update_product.php / delete_product.php
+  admin_orders.php          all orders: search, status tabs, revenue
+  admin_order.php           one order: change status, cancel (returns stock)
   users.php                 customer accounts
   add_user.php / update_user.php / delete_user.php
   Admin.php                 create admin accounts (first admin, then admins only)
@@ -41,6 +45,8 @@ pinkventory/                ← web root (upload the contents of this folder)
   includes/                 server-side only (blocked from the web)
     layout.php              app shell: sidebar, top bar, search, toasts, dialogs
     store.php               storefront components (product cards, cart buttons)
+    orders.php              order logic: place_order(), change_order_status(), lookups
+    order_view.php          order details shared by customer and admin pages
     product_form.php        product form shared by add/update product
   assets/
     css/pinkventory.css     design system for every signed-in page
@@ -56,7 +62,7 @@ database/
   schema.sql                tables, keys and indexes (import into a new database)
   sample_data.sql           optional demo products
   migrate_existing.sql      one-off clean-up for databases created before schema.sql
-  migrations/001_add_orders.sql   PROPOSED orders tables - not yet applied
+  migrations/001_add_orders.sql   orders + order_items tables (run once on existing databases)
 ```
 
 ## Requirements
@@ -134,7 +140,30 @@ autoindex off;
 
 ## Known limitations
 
-- Orders are not saved yet: `database/migrations/001_add_orders.sql` is proposed but not applied. Until then the cart lives in the browser, "Place order" is disabled, and the admin "Sales overview" card says it is not set up.
+- Ordering needs `database/migrations/001_add_orders.sql`. Until it is applied the site still works, but checkout explains that ordering is off and the order pages show an empty state.
+- No real payment processing: the payment method is recorded with the order only.
+- Customers cannot cancel their own orders; an admin cancels (which returns stock).
 - Products have no photo column, so each product is shown with a category icon.
 - No "remember me", password reset or social login.
 - The admin login has no failed-attempt lockout; only the user login does. Use a strong admin password.
+
+## Orders
+
+Placing an order (`place_order.php` → `place_order()` in `includes/orders.php`) runs in one database transaction:
+
+1. Lock the ordered product rows (`SELECT … FOR UPDATE`).
+2. For every line: the product must exist and not be out of stock, the quantity must not exceed stock, and the price the customer saw must equal the current price. Any problem rolls back everything and the customer is sent to the cart with an explanation.
+3. Save the order (status `pending`) and its items with the current price (`unit_price`), so later price changes never alter past orders.
+4. Reduce stock (`UPDATE … SET stock = stock - qty WHERE stock >= qty`), then commit.
+
+A one-time checkout token stops a refresh or double click from creating a second order.
+
+Statuses (changed by admins on `admin_order.php`):
+
+```
+pending ──► processing ──► completed
+   │             │
+   └─────────────┴──► cancelled   (items go back into stock)
+```
+
+`completed` and `cancelled` are final. A status change locks the order row inside a transaction, so stock is returned exactly once even if two cancel requests arrive together. Revenue counts every order that is not cancelled.

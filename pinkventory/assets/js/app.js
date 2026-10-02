@@ -95,7 +95,7 @@
             return;
         }
         form.dataset.submitting = '1';
-        var button = event.submitter || form.querySelector('[type="submit"]');
+        var button = event.submitter || form.querySelector('[type="submit"]') || (form.id ? document.querySelector('[type="submit"][form="' + form.id + '"]') : null);
         if (button && button.classList.contains('btn')) {
             button.classList.add('is-loading');
             button.setAttribute('aria-busy', 'true');

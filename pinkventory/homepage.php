@@ -1,8 +1,16 @@
 <?php
 require_once 'bootstrap.php';
 require_once 'includes/layout.php';
-require_once 'includes/store.php';
+require_once 'includes/orders.php';
 require_user();
+
+$myOrders = null;
+if (orders_enabled($conn) && ($me = current_user_row($conn))) {
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+    $stmt->bind_param("i", $me['id']);
+    $stmt->execute();
+    $myOrders = (int) $stmt->get_result()->fetch_row()[0];
+}
 
 $fullname = current_display_name($conn);
 $firstName = strtok($fullname, ' ') ?: $fullname;
@@ -49,11 +57,19 @@ layout_start('Home', 'home');
         <div class="stat-value num" data-cart-total-count>0</div>
         <div class="stat-meta link-more">View cart <?php echo icon('arrow-right'); ?></div>
     </a>
-    <a href="profile.php" class="card stat">
-        <div class="stat-top">Your account <span class="stat-icon is-ok"><?php echo icon('user'); ?></span></div>
-        <div class="stat-value stat-value-sm"><?php echo e($firstName); ?></div>
-        <div class="stat-meta link-more">Manage profile <?php echo icon('arrow-right'); ?></div>
-    </a>
+    <?php if ($myOrders !== null): ?>
+        <a href="orders.php" class="card stat">
+            <div class="stat-top">Total orders <span class="stat-icon is-ok"><?php echo icon('receipt'); ?></span></div>
+            <div class="stat-value num"><?php echo number_format($myOrders); ?></div>
+            <div class="stat-meta link-more">View orders <?php echo icon('arrow-right'); ?></div>
+        </a>
+    <?php else: ?>
+        <a href="profile.php" class="card stat">
+            <div class="stat-top">Your account <span class="stat-icon is-ok"><?php echo icon('user'); ?></span></div>
+            <div class="stat-value stat-value-sm"><?php echo e($firstName); ?></div>
+            <div class="stat-meta link-more">Manage profile <?php echo icon('arrow-right'); ?></div>
+        </a>
+    <?php endif; ?>
 </section>
 
 <section class="section-block" aria-labelledby="arrivalsTitle">
