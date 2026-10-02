@@ -85,7 +85,8 @@ header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 header("Content-Security-Policy: default-src 'self'; "
     . "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; "
-    . "style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; "
+    . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+    . "img-src 'self' data:; connect-src 'self'; "
     . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
 if (is_https()) {
     header('Strict-Transport-Security: max-age=31536000');
@@ -229,14 +230,14 @@ function login_as(string $key, string $value): void
 function require_login(): void
 {
     if (!is_user() && !is_admin()) {
-        redirect('index.php');
+        redirect('login.php');
     }
 }
 
 function require_admin(): void
 {
     if (!is_admin()) {
-        redirect('index.php');
+        redirect('login.php');
     }
 }
 
@@ -286,4 +287,10 @@ function validate_product(array $input): array
         return [$product, 'Please choose a valid status.'];
     }
     return [$product, null];
+}
+
+/** Where a signed-in visitor belongs: the admin dashboard or the store dashboard. */
+function home_url(): string
+{
+    return is_admin() ? 'admin_dashboard.php' : 'homepage.php';
 }

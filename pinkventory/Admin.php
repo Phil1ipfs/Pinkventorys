@@ -56,50 +56,141 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($blocked)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Registration</title>
-    <link rel="stylesheet" href="<?php echo asset('style.css'); ?>">
+    <title>Create admin account · Pinkventory</title>
+    <link rel="icon" type="image/png" href="pinkventory-logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="<?php echo asset('auth.css'); ?>">
+    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
 </head>
 <body>
-    <div class="page-container">
-        <div class="right-panel">
-        <div class="header">
-                    <div class="brand">
-                        <img src="pinkventory-logo.png" alt="Pinkventory Logo" class="logo">
-                        <span class="brand-name">Pinkventory</span>
-                    </div>
-                </div>
-            <h1>Create Admin Account</h1>
-            <?php if (!empty($blocked)): ?>
-                <div class="alert alert-danger">Only a signed-in admin can create new admin accounts.</div>
+<div class="auth">
+    <aside class="auth-aside">
+        <a href="index.php" class="brand-link">
+            <img src="pinkventory-logo.png" alt="">
+            Pinkventory
+        </a>
+
+        <div class="aside-body">
+            <h2><?php echo is_admin() ? 'Grow your team' : 'Welcome, Admin!'; ?></h2>
+            <p>Admins manage user accounts and keep the store running smoothly.</p>
+            <ul class="perks">
+                <li><span class="perk-icon"><i data-lucide="users"></i></span> Add, edit and remove users</li>
+                <li><span class="perk-icon"><i data-lucide="shield-check"></i></span> Protected admin-only area</li>
+                <li><span class="perk-icon"><i data-lucide="key-round"></i></span> Strong password required</li>
+            </ul>
+        </div>
+
+        <div class="aside-foot">
+            <?php if (is_admin()): ?>
+                <a href="admin_dashboard.php"><i data-lucide="arrow-left"></i> Back to dashboard</a>
             <?php else: ?>
-                <?php if ($message): ?>
-                    <div class="alert alert-<?php echo $messageType; ?>"><?php echo e($message); ?></div>
-                <?php endif; ?>
-                <form method="post" action="">
-                    <?php echo csrf_field(); ?>
-                    <input type="text" name="admin_username" placeholder="Admin Username" pattern="[A-Za-z0-9_]{3,50}" required>
-                    <input type="text" name="admin_fullname" placeholder="Full Name" required>
-                    <input type="password" name="admin_password" placeholder="Password" required>
-                    <button type="submit" name="adminSignUp">Create Admin Account</button>
-                </form>
+                <a href="index.php"><i data-lucide="arrow-left"></i> Back to home</a>
             <?php endif; ?>
-            <p class="already-member">
-                <?php if (is_admin()): ?>
-                    <a href="admin_dashboard.php">Back to dashboard</a>
-                <?php else: ?>
-                    Already a member? <a href="index.php?action=signin">Sign In</a>
-                <?php endif; ?>
+        </div>
+    </aside>
+
+    <main class="auth-main">
+        <div class="auth-card">
+            <a href="index.php" class="brand-link mobile-brand">
+                <img src="pinkventory-logo.png" alt="">
+                Pinkventory
+            </a>
+
+            <h1>Create admin account</h1>
+            <p class="lead">
+                <?php echo is_admin() ? 'Add another administrator for this store.' : 'Set up the first administrator for this store.'; ?>
             </p>
 
-        </div>
-        <div class="left-panel">
-            <h1>Welcome, Admin!</h1>
-            <p>Already have an admin account? Log in now.</p>
-            <a href="index.php?action=signin">
-                <button id="adminbtn">Admin Sign In</button>
-            </a>
-        </div>
+            <?php if (!empty($blocked)): ?>
+                <div class="alert alert-danger" role="alert">
+                    <i data-lucide="lock"></i>
+                    <span>Only a signed-in admin can create new admin accounts.</span>
+                </div>
+                <a href="login.php" class="btn-primary">Go to sign in <i data-lucide="arrow-right"></i></a>
+            <?php else: ?>
+                <?php if ($message): ?>
+                    <div class="alert alert-<?php echo $messageType; ?>" role="<?php echo $messageType === 'success' ? 'status' : 'alert'; ?>">
+                        <i data-lucide="<?php echo $messageType === 'success' ? 'check-circle-2' : 'alert-circle'; ?>"></i>
+                        <span>
+                            <?php echo e($message); ?>
+                            <?php if ($messageType === 'success' && !is_admin()): ?>
+                                <a href="login.php">Sign in now</a>.
+                            <?php endif; ?>
+                        </span>
+                    </div>
+                <?php endif; ?>
 
-    </div>
+                <form method="post" action="" class="form">
+                    <?php echo csrf_field(); ?>
+                    <div class="field">
+                        <label for="admin_username">Username</label>
+                        <div class="input">
+                            <i data-lucide="at-sign"></i>
+                            <input type="text" id="admin_username" name="admin_username" placeholder="store_admin" pattern="[A-Za-z0-9_]{3,50}" title="3-50 letters, numbers or underscores" autocomplete="username" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="admin_fullname">Full name</label>
+                        <div class="input">
+                            <i data-lucide="user"></i>
+                            <input type="text" id="admin_fullname" name="admin_fullname" placeholder="Jane Doe" autocomplete="name" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="admin_password">Password</label>
+                        <div class="input has-toggle">
+                            <i data-lucide="lock"></i>
+                            <input type="password" id="admin_password" name="admin_password" placeholder="Create a strong password" autocomplete="new-password" aria-describedby="passwordRules" required>
+                            <button type="button" class="toggle-pass" aria-label="Show password"><i data-lucide="eye"></i></button>
+                        </div>
+                        <ul class="checklist" id="passwordRules">
+                            <li data-rule="length">8+ characters</li>
+                            <li data-rule="upper">One uppercase letter</li>
+                            <li data-rule="number">One number</li>
+                            <li data-rule="symbol">One symbol</li>
+                        </ul>
+                    </div>
+                    <button type="submit" name="adminSignUp" class="btn-primary">Create admin account <i data-lucide="arrow-right"></i></button>
+                </form>
+
+                <?php if (!is_admin()): ?>
+                    <p class="switch-line">Already have an admin account? <a href="login.php">Sign in</a></p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </main>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    document.querySelectorAll('.toggle-pass').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var input = button.parentElement.querySelector('input');
+            var show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            button.innerHTML = '<i data-lucide="' + (show ? 'eye-off' : 'eye') + '"></i>';
+            lucide.createIcons();
+        });
+    });
+
+    var password = document.getElementById('admin_password');
+    if (password) {
+        var rules = {
+            length: function (v) { return v.length >= 8; },
+            upper: function (v) { return /[A-Z]/.test(v); },
+            number: function (v) { return /[0-9]/.test(v); },
+            symbol: function (v) { return /[^A-Za-z0-9]/.test(v); }
+        };
+        password.addEventListener('input', function () {
+            document.querySelectorAll('#passwordRules li').forEach(function (li) {
+                li.classList.toggle('met', rules[li.dataset.rule](password.value));
+            });
+        });
+    }
+</script>
 </body>
 </html>

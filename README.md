@@ -9,7 +9,8 @@ pinkventory/            ← web root (upload the contents of this folder)
   bootstrap.php         shared setup: config, DB, session, CSRF, auth helpers
   config.example.php    configuration template → copy to config.php
   .htaccess             blocks config/internal files, disables directory listing
-  index.php             sign in (user + admin) / sign up
+  index.php             public landing page
+  login.php             sign in (user + admin) / sign up
   logout.php
   homepage.php          dashboard            (signed-in users and admins)
   inventory.php         product list         (signed-in users and admins)
@@ -20,7 +21,9 @@ pinkventory/            ← web root (upload the contents of this folder)
   add_user.php / update_user.php / delete_user.php
   Admin.php             create admin accounts (first admin, then admins only)
   navbar.php, search.js shared navigation + search box
-  *.css, *.png, *.PNG   styles and images
+  landing.css, auth.css landing page and sign-in/sign-up/admin-setup styles
+  styl.css, styles.css, update.css  app styles
+  *.png, *.PNG          images
 database/
   schema.sql            tables, keys and indexes (import into a new database)
   sample_data.sql       optional demo products
@@ -75,7 +78,7 @@ If your local database predates `schema.sql`, run `database/migrate_existing.sql
 4. **Configure:** copy `config.example.php` to `config.php` on the server and fill in the production values (`APP_ENV` = `production`). You can set environment variables instead if your host supports them.
 5. **Enable HTTPS** (most hosts offer free Let's Encrypt), then set `FORCE_HTTPS` to `true`.
 6. **Create the first admin:** visit `https://your-site/Admin.php` right away. Anyone can create the first admin; after that the page only works for signed-in admins.
-7. **Smoke test:** sign up a user, sign in, add/edit/delete a product, use the search box, then sign in as admin and add/edit/delete a user.
+7. **Smoke test:** open the landing page, sign up a user, sign in, add/edit/delete a product, use the search box, then sign in as admin and add/edit/delete a user.
 
 ### nginx
 
