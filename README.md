@@ -16,14 +16,18 @@ pinkventory/            ← web root (upload the contents of this folder)
   inventory.php         product list         (signed-in users and admins)
   add_product.php / update_product.php / delete_product.php
   Checkout.php          barcode checkout     (signed-in users and admins)
-  search_api.php        JSON product search used by the navbar
+  search_api.php        JSON product search (navbar suggestions + checkout lookup)
   admin_dashboard.php   user management      (admins only)
   add_user.php / update_user.php / delete_user.php
   Admin.php             create admin accounts (first admin, then admins only)
-  navbar.php, search.js shared navigation + search box
-  landing.css, auth.css landing page and sign-in/sign-up/admin-setup styles
-  styl.css, styles.css, update.css  app styles
-  *.png, *.PNG          images
+  layout.php            shared app shell: sidebar, top bar, search, toasts, dialogs
+  product_form.php      product form shared by add/update product
+  app.css               design system for every signed-in page
+  app.js                shared behaviour: navigation, search, toasts, dialogs, idle sign-out
+  inventory.js, product.js, checkout.js, users.js   page-specific behaviour
+  landing.css/.js, auth.css/.js   landing page and sign-in/sign-up/admin-setup
+  icons.svg             icon sprite (Lucide icons, ISC licence) - only the icons used
+  pinkventory-logo.png  logo
 database/
   schema.sql            tables, keys and indexes (import into a new database)
   sample_data.sql       optional demo products
@@ -100,11 +104,11 @@ autoindex off;
 - The session ID is regenerated on login.
 - Sessions use HttpOnly, SameSite=Lax and strict mode, and expire after 30 minutes idle on the server.
 - User sign-in locks for 60 seconds after 5 failed attempts.
+- No inline JavaScript: the CSP allows scripts from this site only (`script-src 'self'`).
 - Security headers are sent on every page: CSP, X-Frame-Options, nosniff, Referrer-Policy and HSTS (HSTS only on HTTPS).
 
 ## Known limitations
 
-- The dashboard's revenue/orders figures and charts are sample data. There is no sales table yet.
-- The Checkout page uses a built-in demo product list, not the inventory table. Completing a sale doesn't change stock.
+- There is no sales table yet, so the dashboard shows inventory figures only (its "Sales & revenue" card says so).
+- Checkout looks up real products and builds a cart, but card/cash payments aren't connected and completing a sale doesn't change stock.
 - The admin login has no failed-attempt lockout; only the user login does. Use a strong admin password.
-- The CSP allows inline scripts (`'unsafe-inline'`) because the pages use inline handlers.

@@ -84,7 +84,7 @@ header('X-Frame-Options: DENY');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: same-origin');
 header("Content-Security-Policy: default-src 'self'; "
-    . "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com; "
+    . "script-src 'self'; "
     . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
     . "img-src 'self' data:; connect-src 'self'; "
     . "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
@@ -204,6 +204,62 @@ function status_slug(?string $status): string
     return strtolower(str_replace(' ', '-', trim((string) $status)));
 }
 
+/** Inline SVG icon from the local sprite (icons.svg). Decorative unless a label is given. */
+function icon(string $name, string $class = '', ?string $label = null): string
+{
+    $a11y = $label === null ? 'aria-hidden="true"' : 'role="img" aria-label="' . e($label) . '"';
+    return '<svg class="icon ' . e($class) . '" ' . $a11y . ' focusable="false"><use href="' . asset('icons.svg') . '#' . e($name) . '"></use></svg>';
+}
+
+/** Queues a toast message to show on the next page view. $type: success | error | info. */
+function flash(string $type, string $message): void
+{
+    $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
+}
+
+function take_flashes(): array
+{
+    $messages = $_SESSION['flash'] ?? [];
+    unset($_SESSION['flash']);
+    return $messages;
+}
+
+/** "3 hours ago" style label for a MySQL DATETIME string. */
+function time_ago(?string $datetime): string
+{
+    $time = $datetime ? strtotime($datetime) : false;
+    if (!$time) {
+        return '—';
+    }
+    $diff = time() - $time;
+    if ($diff < 60) {
+        return 'just now';
+    }
+    foreach ([['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]] as [$unit, $seconds]) {
+        if ($diff >= $seconds) {
+            $n = intdiv($diff, $seconds);
+            return $n . ' ' . $unit . ($n === 1 ? '' : 's') . ' ago';
+        }
+    }
+    return 'just now';
+}
+
+/** Up to two initials for an avatar, e.g. "Amy Pink" → "AP". */
+function initials(string $name): string
+{
+    $parts = preg_split('/[\s_.@-]+/', trim($name), -1, PREG_SPLIT_NO_EMPTY);
+    $letters = '';
+    foreach (array_slice($parts, 0, 2) as $part) {
+        $letters .= mb_strtoupper(mb_substr($part, 0, 1));
+    }
+    return $letters !== '' ? $letters : '?';
+}
+
+function money(float $amount): string
+{
+    return '$' . number_format($amount, 2);
+}
+
 /* ---------------------------------------------------------------------------
  * Authentication
  * ------------------------------------------------------------------------- */
@@ -259,38 +315,82 @@ function current_display_name(mysqli $conn): string
 
 /**
  * Validates submitted product fields.
- * Returns [array $product, ?string $error].
+ * Returns [array $product, array $errors] where $errors is keyed by field name
+ * (empty when the input is valid).
  */
 function validate_product(array $input): array
 {
     $product = [
         'product_name' => trim((string) ($input['product_name'] ?? '')),
-        'category'     => trim((string) ($input['category'] ?? '')),
+        'category'     => strtolower(trim((string) ($input['category'] ?? ''))),
         'stock'        => filter_var($input['stock'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]),
         'price'        => filter_var($input['price'] ?? null, FILTER_VALIDATE_FLOAT),
         'status'       => status_slug($input['status'] ?? ''),
     ];
+    $errors = [];
 
     if ($product['product_name'] === '' || mb_strlen($product['product_name']) > 150) {
-        return [$product, 'Product name is required (up to 150 characters).'];
+        $errors['product_name'] = 'Enter a product name (up to 150 characters).';
     }
     if ($product['category'] === '' || mb_strlen($product['category']) > 50) {
-        return [$product, 'Category is required (up to 50 characters).'];
+        $errors['category'] = 'Choose or type a category (up to 50 characters).';
     }
     if ($product['stock'] === false) {
-        return [$product, 'Stock must be a whole number of 0 or more.'];
+        $errors['stock'] = 'Stock must be a whole number of 0 or more.';
     }
     if ($product['price'] === false || $product['price'] < 0 || $product['price'] > 99999999.99) {
-        return [$product, 'Price must be a positive amount.'];
+        $errors['price'] = 'Enter a price of 0 or more, e.g. 19.99.';
     }
     if (!isset(INVENTORY_STATUSES[$product['status']])) {
-        return [$product, 'Please choose a valid status.'];
+        $errors['status'] = 'Choose a stock status.';
     }
-    return [$product, null];
+    return [$product, $errors];
+}
+
+/** Categories offered in product forms: the defaults plus any already in use. */
+function product_categories(mysqli $conn): array
+{
+    $categories = ['accessories', 'clothing', 'electronics'];
+    $result = $conn->query("SELECT DISTINCT LOWER(category) AS category FROM inventory WHERE category <> '' ORDER BY category");
+    foreach ($result->fetch_all(MYSQLI_ASSOC) as $row) {
+        $categories[] = $row['category'];
+    }
+    $categories = array_values(array_unique($categories));
+    sort($categories);
+    return $categories;
+}
+
+/** How a product's stock should be presented: 'out', 'low' or 'ok'. */
+function stock_level(int $stock, ?string $status = null): string
+{
+    $slug = status_slug($status);
+    if ($stock <= 0 || $slug === 'out-of-stock') {
+        return 'out';
+    }
+    if ($stock <= LOW_STOCK_THRESHOLD || $slug === 'low-stock') {
+        return 'low';
+    }
+    return 'ok';
 }
 
 /** Where a signed-in visitor belongs: the admin dashboard or the store dashboard. */
 function home_url(): string
 {
     return is_admin() ? 'admin_dashboard.php' : 'homepage.php';
+}
+
+/**
+ * SQL conditions for a product's effective stock level, matching stock_level():
+ * out = no stock or marked out; low = at/below the threshold or marked low.
+ */
+function stock_level_sql(): array
+{
+    $out = "(stock <= 0 OR status IN ('out-of-stock', 'Out of Stock'))";
+    $low = "(NOT $out AND (stock <= " . LOW_STOCK_THRESHOLD . " OR status IN ('low-stock', 'Low Stock')))";
+    return ['out' => $out, 'low' => $low, 'ok' => "(NOT $out AND NOT $low)"];
+}
+
+function level_label(string $level): string
+{
+    return ['ok' => 'In stock', 'low' => 'Low stock', 'out' => 'Out of stock'][$level] ?? 'In stock';
 }

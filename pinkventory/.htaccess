@@ -2,7 +2,7 @@ Options -Indexes
 DirectoryIndex index.php
 
 # Block configuration, internal includes and stray files from direct web access.
-<FilesMatch "^(config\.php|config\.example\.php|bootstrap\.php|.*\.sql|.*\.md|.*\.log)$">
+<FilesMatch "^(config\.php|config\.example\.php|bootstrap.php|layout.php|product_form.php|.*\.sql|.*\.md|.*\.log)$">
     Require all denied
 </FilesMatch>
 

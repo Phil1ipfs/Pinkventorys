@@ -154,9 +154,9 @@ $adminSelected = isset($_POST['admin_username']);
     <link rel="icon" type="image/png" href="pinkventory-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="<?php echo asset('auth.css'); ?>">
-    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
+    <script src="<?php echo asset('auth.js'); ?>" defer></script>
 </head>
 <body>
 <div class="auth">
@@ -175,14 +175,14 @@ $adminSelected = isset($_POST['admin_username']);
                 <p>Sign in to keep your shelves stocked and your checkout moving.</p>
             <?php endif; ?>
             <ul class="perks">
-                <li><span class="perk-icon"><i data-lucide="package"></i></span> Real-time stock tracking</li>
-                <li><span class="perk-icon"><i data-lucide="scan-barcode"></i></span> Fast barcode checkout</li>
-                <li><span class="perk-icon"><i data-lucide="bell-ring"></i></span> Low-stock alerts before you run out</li>
+                <li><span class="perk-icon"><?php echo icon('package'); ?></span> Real-time stock tracking</li>
+                <li><span class="perk-icon"><?php echo icon('scan-barcode'); ?></span> Fast barcode checkout</li>
+                <li><span class="perk-icon"><?php echo icon('bell-ring'); ?></span> Low-stock alerts before you run out</li>
             </ul>
         </div>
 
         <div class="aside-foot">
-            <a href="index.php"><i data-lucide="arrow-left"></i> Back to home</a>
+            <a href="index.php"><?php echo icon('arrow-left'); ?> Back to home</a>
         </div>
     </aside>
 
@@ -203,15 +203,15 @@ $adminSelected = isset($_POST['admin_username']);
                 <p class="lead">Choose how you're signing in, then enter your details.</p>
 
                 <div class="role-switch" role="group" aria-label="Sign in as">
-                    <button type="button" data-role="user" aria-pressed="<?php echo $adminSelected ? 'false' : 'true'; ?>"><i data-lucide="user"></i> User</button>
-                    <button type="button" data-role="admin" aria-pressed="<?php echo $adminSelected ? 'true' : 'false'; ?>"><i data-lucide="shield-check"></i> Admin</button>
+                    <button type="button" data-role="user" aria-pressed="<?php echo $adminSelected ? 'false' : 'true'; ?>"><?php echo icon('user'); ?> User</button>
+                    <button type="button" data-role="admin" aria-pressed="<?php echo $adminSelected ? 'true' : 'false'; ?>"><?php echo icon('shield-check'); ?> Admin</button>
                 </div>
 
                 <?php if ($success): ?>
-                    <div class="alert alert-success" role="status"><i data-lucide="check-circle-2"></i><span><?php echo e($success); ?></span></div>
+                    <div class="alert alert-success" role="status"><?php echo icon('check-circle-2'); ?><span><?php echo e($success); ?></span></div>
                 <?php endif; ?>
                 <?php if (isset($error)): ?>
-                    <div class="alert alert-danger" role="alert"><i data-lucide="alert-circle"></i><span><?php echo e($error); ?></span></div>
+                    <div class="alert alert-danger" role="alert"><?php echo icon('alert-circle'); ?><span><?php echo e($error); ?></span></div>
                 <?php endif; ?>
 
                 <form method="post" action="login.php?action=signin" class="form" id="userLoginForm" <?php echo $adminSelected ? 'hidden' : ''; ?>>
@@ -219,19 +219,19 @@ $adminSelected = isset($_POST['admin_username']);
                     <div class="field">
                         <label for="email">Email</label>
                         <div class="input">
-                            <i data-lucide="mail"></i>
+                            <?php echo icon('mail'); ?>
                             <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" value="<?php echo e($_POST['email'] ?? ''); ?>" required>
                         </div>
                     </div>
                     <div class="field">
                         <label for="password">Password</label>
                         <div class="input has-toggle">
-                            <i data-lucide="lock"></i>
+                            <?php echo icon('lock'); ?>
                             <input type="password" id="password" name="password" placeholder="Your password" autocomplete="current-password" required>
-                            <button type="button" class="toggle-pass" aria-label="Show password"><i data-lucide="eye"></i></button>
+                            <button type="button" class="toggle-pass" aria-label="Show password" aria-pressed="false"><?php echo icon('eye', 'icon-show') . icon('eye-off', 'icon-hide'); ?></button>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">Sign in <i data-lucide="arrow-right"></i></button>
+                    <button type="submit" class="btn-primary">Sign in <?php echo icon('arrow-right'); ?></button>
                 </form>
 
                 <form method="post" action="login.php?action=signin" class="form" id="adminLoginForm" <?php echo $adminSelected ? '' : 'hidden'; ?>>
@@ -239,19 +239,19 @@ $adminSelected = isset($_POST['admin_username']);
                     <div class="field">
                         <label for="admin_username">Admin username</label>
                         <div class="input">
-                            <i data-lucide="shield-check"></i>
+                            <?php echo icon('shield-check'); ?>
                             <input type="text" id="admin_username" name="admin_username" placeholder="admin_username" autocomplete="username" value="<?php echo e($_POST['admin_username'] ?? ''); ?>" required>
                         </div>
                     </div>
                     <div class="field">
                         <label for="admin_password">Password</label>
                         <div class="input has-toggle">
-                            <i data-lucide="lock"></i>
+                            <?php echo icon('lock'); ?>
                             <input type="password" id="admin_password" name="admin_password" placeholder="Admin password" autocomplete="current-password" required>
-                            <button type="button" class="toggle-pass" aria-label="Show password"><i data-lucide="eye"></i></button>
+                            <button type="button" class="toggle-pass" aria-label="Show password" aria-pressed="false"><?php echo icon('eye', 'icon-show') . icon('eye-off', 'icon-hide'); ?></button>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">Sign in as admin <i data-lucide="arrow-right"></i></button>
+                    <button type="submit" class="btn-primary">Sign in as admin <?php echo icon('arrow-right'); ?></button>
                     <?php if ($needsFirstAdmin): ?>
                         <p class="switch-line">Setting up? <a href="Admin.php">Create the first admin account</a></p>
                     <?php endif; ?>
@@ -265,7 +265,7 @@ $adminSelected = isset($_POST['admin_username']);
 
                 <?php if (!empty($errors)): ?>
                     <div class="alert alert-danger" role="alert">
-                        <i data-lucide="alert-circle"></i>
+                        <?php echo icon('alert-circle'); ?>
                         <ul><?php foreach ($errors as $err) echo '<li>' . e($err) . '</li>'; ?></ul>
                     </div>
                 <?php endif; ?>
@@ -275,14 +275,14 @@ $adminSelected = isset($_POST['admin_username']);
                     <div class="field">
                         <label for="fullname">Full name</label>
                         <div class="input">
-                            <i data-lucide="user"></i>
+                            <?php echo icon('user'); ?>
                             <input type="text" id="fullname" name="fullname" placeholder="Jane Doe" autocomplete="name" maxlength="100" value="<?php echo e($_POST['fullname'] ?? ''); ?>" required>
                         </div>
                     </div>
                     <div class="field">
                         <label for="email">Email</label>
                         <div class="input">
-                            <i data-lucide="mail"></i>
+                            <?php echo icon('mail'); ?>
                             <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" value="<?php echo e($_POST['email'] ?? ''); ?>" required>
                         </div>
                     </div>
@@ -290,7 +290,7 @@ $adminSelected = isset($_POST['admin_username']);
                         <div class="field">
                             <label for="dob">Date of birth</label>
                             <div class="input">
-                                <i data-lucide="calendar"></i>
+                                <?php echo icon('calendar'); ?>
                                 <input type="date" id="dob" name="dob" max="<?php echo date('Y-m-d'); ?>" value="<?php echo e($_POST['dob'] ?? ''); ?>" required>
                             </div>
                         </div>
@@ -309,11 +309,11 @@ $adminSelected = isset($_POST['admin_username']);
                     <div class="field">
                         <label for="password">Password</label>
                         <div class="input has-toggle">
-                            <i data-lucide="lock"></i>
+                            <?php echo icon('lock'); ?>
                             <input type="password" id="password" name="password" placeholder="Create a password" autocomplete="new-password" aria-describedby="passwordRules" required>
-                            <button type="button" class="toggle-pass" aria-label="Show password"><i data-lucide="eye"></i></button>
+                            <button type="button" class="toggle-pass" aria-label="Show password" aria-pressed="false"><?php echo icon('eye', 'icon-show') . icon('eye-off', 'icon-hide'); ?></button>
                         </div>
-                        <ul class="checklist" id="passwordRules">
+                        <ul class="checklist" id="passwordRules" data-rules-for="password">
                             <li data-rule="length">8+ characters</li>
                             <li data-rule="upper">One uppercase letter</li>
                             <li data-rule="number">One number</li>
@@ -322,13 +322,13 @@ $adminSelected = isset($_POST['admin_username']);
                     <div class="field">
                         <label for="repeat_password">Confirm password</label>
                         <div class="input has-toggle">
-                            <i data-lucide="lock"></i>
+                            <?php echo icon('lock'); ?>
                             <input type="password" id="repeat_password" name="repeat_password" placeholder="Repeat your password" autocomplete="new-password" aria-describedby="matchHint" required>
-                            <button type="button" class="toggle-pass" aria-label="Show password"><i data-lucide="eye"></i></button>
+                            <button type="button" class="toggle-pass" aria-label="Show password" aria-pressed="false"><?php echo icon('eye', 'icon-show') . icon('eye-off', 'icon-hide'); ?></button>
                         </div>
                         <p class="hint" id="matchHint" aria-live="polite"></p>
                     </div>
-                    <button type="submit" class="btn-primary">Create account <i data-lucide="arrow-right"></i></button>
+                    <button type="submit" class="btn-primary">Create account <?php echo icon('arrow-right'); ?></button>
                 </form>
 
                 <p class="switch-line">Already have an account? <a href="login.php">Sign in</a></p>
@@ -337,65 +337,5 @@ $adminSelected = isset($_POST['admin_username']);
     </main>
 </div>
 
-<script>
-    lucide.createIcons();
-
-    // User / Admin switch
-    document.querySelectorAll('.role-switch button').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var isAdmin = button.dataset.role === 'admin';
-            document.querySelectorAll('.role-switch button').forEach(function (b) {
-                b.setAttribute('aria-pressed', String(b === button));
-            });
-            document.getElementById('userLoginForm').hidden = isAdmin;
-            document.getElementById('adminLoginForm').hidden = !isAdmin;
-            document.getElementById(isAdmin ? 'admin_username' : 'email').focus();
-        });
-    });
-
-    // Show / hide password
-    document.querySelectorAll('.toggle-pass').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var input = button.parentElement.querySelector('input');
-            var show = input.type === 'password';
-            input.type = show ? 'text' : 'password';
-            button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-            button.innerHTML = '<i data-lucide="' + (show ? 'eye-off' : 'eye') + '"></i>';
-            lucide.createIcons();
-        });
-    });
-
-    // Live password rules + match check on sign up
-    var signupForm = document.getElementById('signupForm');
-    if (signupForm) {
-        var password = document.getElementById('password');
-        var repeat = document.getElementById('repeat_password');
-        var hint = document.getElementById('matchHint');
-        var rules = {
-            length: function (v) { return v.length >= 8; },
-            upper: function (v) { return /[A-Z]/.test(v); },
-            number: function (v) { return /[0-9]/.test(v); }
-        };
-
-        function refresh() {
-            document.querySelectorAll('#passwordRules li').forEach(function (li) {
-                li.classList.toggle('met', rules[li.dataset.rule](password.value));
-            });
-            if (!repeat.value) {
-                hint.textContent = '';
-                hint.className = 'hint';
-            } else if (repeat.value === password.value) {
-                hint.textContent = 'Passwords match';
-                hint.className = 'hint ok';
-            } else {
-                hint.textContent = 'Passwords do not match yet';
-                hint.className = 'hint bad';
-            }
-        }
-
-        password.addEventListener('input', refresh);
-        repeat.addEventListener('input', refresh);
-    }
-</script>
 </body>
 </html>

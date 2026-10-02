@@ -25,10 +25,9 @@ $signedIn = is_user() || is_admin();
     <link rel="icon" type="image/png" href="pinkventory-logo.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap">
     <link rel="stylesheet" href="<?php echo asset('landing.css'); ?>">
-    <script>document.documentElement.classList.add('js');</script>
-    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js" defer></script>
+    <script src="<?php echo asset('landing.js'); ?>"></script>
 </head>
 <body>
 
@@ -40,7 +39,7 @@ $signedIn = is_user() || is_admin();
         </a>
 
         <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-expanded="false" aria-controls="siteNav">
-            <i data-lucide="menu"></i>
+            <?php echo icon('menu'); ?>
         </button>
 
         <nav class="nav-links" aria-label="Main">
@@ -65,23 +64,23 @@ $signedIn = is_user() || is_admin();
     <section class="hero">
         <div class="wrap hero-grid">
             <div class="hero-copy">
-                <span class="eyebrow"><span class="dot"><i data-lucide="sparkles"></i></span> Inventory management, made pretty</span>
+                <span class="eyebrow"><span class="dot"><?php echo icon('sparkles'); ?></span> Inventory management, made pretty</span>
                 <h1>Know your stock. <span class="accent">Sell with confidence.</span></h1>
                 <p>Pinkventory keeps your products, stock levels and checkout in one tidy place, so you always know what's on the shelf and what needs reordering.</p>
 
                 <div class="hero-ctas">
                     <?php if ($signedIn): ?>
-                        <a href="<?php echo home_url(); ?>" class="btn btn-primary">Open your dashboard <i data-lucide="arrow-right"></i></a>
+                        <a href="<?php echo home_url(); ?>" class="btn btn-primary">Open your dashboard <?php echo icon('arrow-right'); ?></a>
                     <?php else: ?>
-                        <a href="login.php?action=signup" class="btn btn-primary">Create free account <i data-lucide="arrow-right"></i></a>
+                        <a href="login.php?action=signup" class="btn btn-primary">Create free account <?php echo icon('arrow-right'); ?></a>
                         <a href="login.php" class="btn btn-ghost">Sign in</a>
                     <?php endif; ?>
                 </div>
 
                 <ul class="hero-note">
-                    <li><i data-lucide="check"></i> Free to get started</li>
-                    <li><i data-lucide="check"></i> Works on any device</li>
-                    <li><i data-lucide="check"></i> Set up in minutes</li>
+                    <li><?php echo icon('check'); ?> Free to get started</li>
+                    <li><?php echo icon('check'); ?> Works on any device</li>
+                    <li><?php echo icon('check'); ?> Set up in minutes</li>
                 </ul>
             </div>
 
@@ -122,11 +121,11 @@ $signedIn = is_user() || is_admin();
                 </div>
 
                 <div class="float-card float-a">
-                    <span class="ic"><i data-lucide="package-check"></i></span>
+                    <span class="ic"><?php echo icon('package-check'); ?></span>
                     <div><strong>Stock updated</strong><small>Pink Hoodie +24</small></div>
                 </div>
                 <div class="float-card float-b">
-                    <span class="ic"><i data-lucide="bell-ring"></i></span>
+                    <span class="ic"><?php echo icon('bell-ring'); ?></span>
                     <div><strong>Low-stock alert</strong><small>Phone Charger · 6 left</small></div>
                 </div>
             </div>
@@ -137,9 +136,9 @@ $signedIn = is_user() || is_admin();
     <section class="strip" aria-label="Highlights">
         <div class="wrap">
             <ul>
-                <li><i data-lucide="store"></i> Built for small shops</li>
-                <li><i data-lucide="smartphone"></i> Desktop, tablet &amp; phone</li>
-                <li><i data-lucide="lock"></i> Secure accounts &amp; roles</li>
+                <li><?php echo icon('store'); ?> Built for small shops</li>
+                <li><?php echo icon('smartphone'); ?> Desktop, tablet &amp; phone</li>
+                <li><?php echo icon('lock'); ?> Secure accounts &amp; roles</li>
             </ul>
         </div>
     </section>
@@ -155,32 +154,32 @@ $signedIn = is_user() || is_admin();
 
             <div class="features">
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="package"></i></span>
+                    <span class="ic"><?php echo icon('package'); ?></span>
                     <h3>Live inventory</h3>
                     <p>Add, edit and remove products with categories, prices and stock levels that update instantly.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="scan-barcode"></i></span>
+                    <span class="ic"><?php echo icon('scan-barcode'); ?></span>
                     <h3>Barcode checkout</h3>
                     <p>Scan or type a barcode to build a cart, with subtotal, tax and total worked out for you.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="bell-ring"></i></span>
+                    <span class="ic"><?php echo icon('bell-ring'); ?></span>
                     <h3>Low-stock alerts</h3>
                     <p>See which items are running low on your dashboard before customers find empty shelves.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="bar-chart-3"></i></span>
+                    <span class="ic"><?php echo icon('bar-chart-3'); ?></span>
                     <h3>Sales dashboard</h3>
                     <p>Revenue, orders and average order value at a glance, with clear weekly trend charts.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="search"></i></span>
+                    <span class="ic"><?php echo icon('search'); ?></span>
                     <h3>Instant search</h3>
                     <p>Find any product in seconds with suggestions that appear as you type.</p>
                 </article>
                 <article class="feature reveal">
-                    <span class="ic"><i data-lucide="shield-check"></i></span>
+                    <span class="ic"><?php echo icon('shield-check'); ?></span>
                     <h3>Secure by design</h3>
                     <p>Separate user and admin roles, encrypted passwords and protection against common attacks.</p>
                 </article>
@@ -221,9 +220,9 @@ $signedIn = is_user() || is_admin();
                 <h2>Ready to get organised?</h2>
                 <p>Join Pinkventory today and spend less time counting boxes and more time selling.</p>
                 <?php if ($signedIn): ?>
-                    <a href="<?php echo home_url(); ?>" class="btn btn-light">Open your dashboard <i data-lucide="arrow-right"></i></a>
+                    <a href="<?php echo home_url(); ?>" class="btn btn-light">Open your dashboard <?php echo icon('arrow-right'); ?></a>
                 <?php else: ?>
-                    <a href="login.php?action=signup" class="btn btn-light">Create free account <i data-lucide="arrow-right"></i></a>
+                    <a href="login.php?action=signup" class="btn btn-light">Create free account <?php echo icon('arrow-right'); ?></a>
                 <?php endif; ?>
             </div>
         </div>
@@ -246,50 +245,5 @@ $signedIn = is_user() || is_admin();
     </div>
 </footer>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        if (window.lucide) {
-            lucide.createIcons();
-        }
-
-        // Mobile menu
-        var nav = document.getElementById('siteNav');
-        var toggle = document.getElementById('menuToggle');
-        toggle.addEventListener('click', function () {
-            var open = nav.classList.toggle('open');
-            toggle.setAttribute('aria-expanded', String(open));
-            toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-        });
-        nav.querySelectorAll('.nav-links a').forEach(function (link) {
-            link.addEventListener('click', function () {
-                nav.classList.remove('open');
-                toggle.setAttribute('aria-expanded', 'false');
-            });
-        });
-
-        // Border under the nav once the page scrolls
-        var onScroll = function () {
-            nav.classList.toggle('scrolled', window.scrollY > 8);
-        };
-        onScroll();
-        window.addEventListener('scroll', onScroll, { passive: true });
-
-        // Fade sections in as they enter the viewport
-        var items = document.querySelectorAll('.reveal');
-        if ('IntersectionObserver' in window) {
-            var observer = new IntersectionObserver(function (entries) {
-                entries.forEach(function (entry) {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('in');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.12 });
-            items.forEach(function (item) { observer.observe(item); });
-        } else {
-            items.forEach(function (item) { item.classList.add('in'); });
-        }
-    });
-</script>
 </body>
 </html>

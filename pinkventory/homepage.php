@@ -1,367 +1,236 @@
 <?php
 require_once 'bootstrap.php';
+require_once 'layout.php';
 require_login();
 
 $fullname = current_display_name($conn);
-$activePage = 'dashboard';
+$firstName = strtok($fullname, ' ') ?: $fullname;
 
-// Live inventory figures. Revenue and order charts remain sample data until a sales table exists.
-$activeItems = (int) $conn->query("SELECT COUNT(*) FROM inventory")->fetch_row()[0];
-$customerCount = (int) $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0];
+// Every figure below comes from the inventory and users tables.
+$levels = stock_level_sql();
+$lowSql = $levels['low'];
+$outSql = $levels['out'];
 
-$lowStockWhere = "stock <= " . LOW_STOCK_THRESHOLD . " OR status IN ('low-stock', 'out-of-stock', 'Low Stock', 'Out of Stock')";
-$lowStockCount = (int) $conn->query("SELECT COUNT(*) FROM inventory WHERE $lowStockWhere")->fetch_row()[0];
-$lowStockItems = $conn->query("SELECT product_name, category, stock FROM inventory WHERE $lowStockWhere ORDER BY stock ASC, product_name LIMIT 5");
+$totals = $conn->query("SELECT
+        COUNT(*) AS products,
+        COALESCE(SUM(stock), 0) AS units,
+        COALESCE(SUM(stock * price), 0) AS value,
+        COALESCE(SUM($lowSql), 0) AS low,
+        COALESCE(SUM($outSql), 0) AS out_of_stock,
+        COUNT(DISTINCT category) AS categories
+    FROM inventory")->fetch_assoc();
+
+$products = (int) $totals['products'];
+$low = (int) $totals['low'];
+$out = (int) $totals['out_of_stock'];
+$healthy = max($products - $low - $out, 0);
+$customers = (int) $conn->query("SELECT COUNT(*) FROM users")->fetch_row()[0];
+
+// Inventory value by category (top 6, the rest folded into "Other")
+$categoryRows = $conn->query("SELECT category, COUNT(*) AS items, COALESCE(SUM(stock * price), 0) AS value
+    FROM inventory GROUP BY category ORDER BY value DESC")->fetch_all(MYSQLI_ASSOC);
+if (count($categoryRows) > 6) {
+    $rest = array_slice($categoryRows, 5);
+    $categoryRows = array_slice($categoryRows, 0, 5);
+    $categoryRows[] = [
+        'category' => 'Other',
+        'items' => array_sum(array_column($rest, 'items')),
+        'value' => array_sum(array_column($rest, 'value')),
+    ];
+}
+$maxCategoryValue = max(array_merge([0.01], array_map('floatval', array_column($categoryRows, 'value'))));
+
+$attention = $conn->query("SELECT id, product_name, category, stock, status FROM inventory
+    WHERE $lowSql OR $outSql ORDER BY stock ASC, product_name LIMIT 5")->fetch_all(MYSQLI_ASSOC);
+
+$recent = $conn->query("SELECT id, product_name, category, stock, status, last_updated FROM inventory
+    ORDER BY last_updated DESC, id DESC LIMIT 6")->fetch_all(MYSQLI_ASSOC);
+
+$statusParts = [
+    ['In stock', $healthy, 'var(--ok-mark)', 'in-stock'],
+    ['Low stock', $low, 'var(--warn-mark)', 'low-stock'],
+    ['Out of stock', $out, 'var(--danger-mark)', 'out-of-stock'],
+];
+
+layout_start('Dashboard', 'dashboard');
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Pinkventory - Retail Store Inventory Management System">
-    <meta name="keywords" content="inventory, retail, management, sales, dashboard">
-    <meta name="author" content="Your Name">
-    <title>Retail Store Inventory Management</title>
-    <link rel="stylesheet" href="<?php echo asset('styl.css'); ?>">
-    <script src="https://unpkg.com/lucide@0.359.0/dist/umd/lucide.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-</head>
-<body>
-<?php include 'navbar.php'; ?>
-
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Quick Actions -->
-        <section class="quick-actions">
-            <button class="action-btn primary" onclick="window.location.href='Checkout.php'">
-                <i data-lucide="scan-barcode"></i>
-                New Sale
-            </button>
-            <button class="action-btn secondary" onclick="window.location.href='inventory.php'">
-                <i data-lucide="package"></i>
-                Manage Inventory
-            </button>
-            <!-- Profile Section -->
-            <div class="profile">
-              <img src="cillak.PNG" alt="User Profile" class="profile-img">
-              <span class="profile-name"><?php echo e($fullname); ?></span>
-
-              <!-- Dropdown Menu -->
-              <div class="profile-dropdown">
-                  <a href="#">⚙️ Settings</a>
-                  <a href="<?php echo e(logout_url()); ?>">🚪 Logout</a>
-              </div>
-          </div>
-        </section>
-
-        <!-- Stats Grid -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-header">
-                    <h3>Daily Revenue</h3>
-                    <i data-lucide="bar-chart-2"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-value">$2,850.00</div>
-                    <div class="stat-trend positive">
-                        <i data-lucide="trending-up"></i>
-                        +20.1% from yesterday
-                    </div>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <h3>Orders Today</h3>
-                    <i data-lucide="shopping-cart"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-value">145</div>
-                    <div class="stat-subtext">Avg. order value: $19.65</div>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <h3>Active Items</h3>
-                    <i data-lucide="package"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-value"><?php echo number_format($activeItems); ?></div>
-                    <div class="stat-trend negative"><?php echo $lowStockCount; ?> items low on stock</div>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <h3>Customers</h3>
-                    <i data-lucide="users"></i>
-                </div>
-                <div class="stat-content">
-                    <div class="stat-value"><?php echo number_format($customerCount); ?></div>
-                    <div class="stat-subtext">Registered accounts</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Charts and Alerts -->
-        <section class="dashboard-grid">
-            <!-- Sales Performance Chart -->
-    <div class="chart-card">
-    <div class="card-header">
-        <h2>Sales Performance</h2>
-        <p>Weekly revenue and order trends</p>
+<div class="welcome">
+    <div>
+        <h1>Welcome back, <?php echo e($firstName); ?></h1>
+        <p>Here's how your stock looks right now.</p>
     </div>
-    <div class="card-content">
-        <!-- Stats with Mini Line Charts -->
-        <div class="stats">
-            <div class="stat-item">
-                <h3>Total Revenue</h3>
-                <canvas id="revenueChart"></canvas>
-            </div>
-            <div class="stat-item">
-                <h3>Total Orders</h3>
-                <canvas id="ordersChart"></canvas>
-            </div>
-            <div class="stat-item">
-                <h3>Avg Order Value</h3>
-                <canvas id="aovChart"></canvas>
-            </div>
-        </div>
+    <div class="page-actions">
+        <a href="Checkout.php" class="btn btn-secondary"><?php echo icon('scan-barcode'); ?> New sale</a>
+        <a href="add_product.php" class="btn btn-primary"><?php echo icon('plus'); ?> Add product</a>
     </div>
 </div>
 
-            <!-- Low Stock Alerts -->
-            <div class="alerts-card">
-                <div class="card-header">
-                    <div>
-                        <h2>Low Stock Alerts</h2>
-                        <p>Items requiring attention</p>
-                    </div>
-                    <i data-lucide="alert-triangle" class="warning-icon"></i>
-                </div>
-                <div class="alerts-content">
-                    <?php while ($low = $lowStockItems->fetch_assoc()): ?>
-                    <div class="alert-item">
-                        <div class="alert-info">
-                            <h4><?php echo e($low['product_name']); ?></h4>
-                            <p><?php echo e(ucfirst($low['category'])); ?></p>
-                            <div class="stock-level1">Stock: <?php echo (int) $low['stock']; ?></div>
-                        </div>
-                        <span class="alert-badge">Reorder</span>
-                    </div>
-                    <?php endwhile; ?>
-                    <?php if ($lowStockCount === 0): ?>
-                    <div class="alert-item">
-                        <div class="alert-info">
-                            <h4>All stock levels look healthy</h4>
-                        </div>
-                    </div>
-                    <?php endif; ?>
-                </div>
+<section class="stats" aria-label="Inventory summary">
+    <a href="inventory.php" class="card stat">
+        <div class="stat-top">Total products <span class="stat-icon"><?php echo icon('package'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format($products); ?></div>
+        <div class="stat-meta">Across <?php echo (int) $totals['categories']; ?> <?php echo (int) $totals['categories'] === 1 ? 'category' : 'categories'; ?></div>
+    </a>
+    <div class="card stat">
+        <div class="stat-top">Inventory value <span class="stat-icon is-ok"><?php echo icon('wallet'); ?></span></div>
+        <div class="stat-value num"><?php echo money((float) $totals['value']); ?></div>
+        <div class="stat-meta">Stock on hand × price</div>
+    </div>
+    <div class="card stat">
+        <div class="stat-top">Units in stock <span class="stat-icon is-info"><?php echo icon('boxes'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format((int) $totals['units']); ?></div>
+        <div class="stat-meta"><?php echo number_format($customers); ?> registered <?php echo $customers === 1 ? 'customer' : 'customers'; ?></div>
+    </div>
+    <a href="inventory.php?status=attention" class="card stat">
+        <div class="stat-top">Needs attention <span class="stat-icon is-warn"><?php echo icon('bell-ring'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format($low + $out); ?></div>
+        <div class="stat-meta"><strong class="is-warn"><?php echo $low; ?> low</strong> · <strong class="is-danger"><?php echo $out; ?> out of stock</strong></div>
+    </a>
+</section>
+
+<div class="grid-2">
+    <section class="card" aria-labelledby="valueTitle">
+        <div class="card-head">
+            <div>
+                <h2 id="valueTitle">Inventory value by category</h2>
+                <p>Stock on hand × unit price</p>
             </div>
-        </section>
-    </main>
-  
-    <!-- Footer -->
-    <footer class="footer">
-        <p>© 2023 Pinkventory. All rights reserved.</p>
-    </footer>
+        </div>
+        <div class="card-body">
+            <?php if (!$categoryRows): ?>
+                <div class="empty empty-sm">
+                    <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
+                    <h3>No data yet</h3>
+                    <p>Add products to see how your stock value splits across categories.</p>
+                    <a href="add_product.php" class="btn btn-primary btn-sm"><?php echo icon('plus', 'icon-sm'); ?> Add product</a>
+                </div>
+            <?php else: ?>
+                <ul class="hbars">
+                    <?php foreach ($categoryRows as $row):
+                        $value = (float) $row['value'];
+                        $label = ucfirst((string) $row['category']);
+                        $pct = max(0, min(100, $value / $maxCategoryValue * 100)); ?>
+                        <li class="hbar" tabindex="0" title="<?php echo e($label . ': ' . money($value) . ' across ' . $row['items'] . ' products'); ?>">
+                            <span class="hbar-label"><?php echo e($label); ?></span>
+                            <span class="hbar-track"><span class="hbar-fill" style="width: <?php echo round($pct, 2); ?>%"></span></span>
+                            <span class="hbar-value"><?php echo money($value); ?><span class="hbar-sub"><?php echo (int) $row['items']; ?> <?php echo (int) $row['items'] === 1 ? 'product' : 'products'; ?></span></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
+    </section>
 
-      <!-- Session Timeout Modal -->
-      <div id="sessionTimeoutModal" class="modal">
-          <div class="modal-content">
-              <h2>Session Timeout</h2>
-              <p>Your session is about to expire due to inactivity. You will be logged out in <span id="countdown">60</span> seconds.</p>
-          </div>
-      </div>
+    <section class="card" aria-labelledby="statusTitle">
+        <div class="card-head">
+            <div>
+                <h2 id="statusTitle">Stock status</h2>
+                <p><?php echo number_format($products); ?> products</p>
+            </div>
+        </div>
+        <div class="card-body">
+            <?php if ($products > 0): ?>
+                <div class="segbar" role="img" aria-label="<?php echo e("$healthy in stock, $low low stock, $out out of stock"); ?>">
+                    <?php foreach ($statusParts as [$label, $count, $color]): if ($count > 0): ?>
+                        <span style="flex: <?php echo $count; ?>; background: <?php echo $color; ?>" title="<?php echo e("$label: $count"); ?>"></span>
+                    <?php endif; endforeach; ?>
+                </div>
+            <?php endif; ?>
+            <ul class="legend">
+                <?php foreach ($statusParts as [$label, $count, $color, $slug]): ?>
+                    <li>
+                        <span class="swatch" style="background: <?php echo $color; ?>"></span>
+                        <a class="label" href="inventory.php?status=<?php echo $slug; ?>"><?php echo e($label); ?></a>
+                        <span class="value"><?php echo number_format($count); ?></span>
+                        <span class="pct"><?php echo $products ? round($count / $products * 100) : 0; ?>%</span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </section>
+</div>
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-    </script>
+<div class="grid-2">
+    <section class="card" aria-labelledby="recentTitle">
+        <div class="card-head">
+            <div>
+                <h2 id="recentTitle">Recently updated</h2>
+                <p>Latest product changes</p>
+            </div>
+            <a href="inventory.php?sort=updated&amp;dir=desc" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
+        </div>
+        <?php if (!$recent): ?>
+            <div class="empty empty-sm">
+                <span class="empty-icon"><?php echo icon('history'); ?></span>
+                <h3>No activity yet</h3>
+                <p>Products you add or edit will show up here.</p>
+            </div>
+        <?php else: ?>
+            <ul class="rows">
+                <?php foreach ($recent as $item): $level = stock_level((int) $item['stock'], $item['status']); ?>
+                    <li class="row-item">
+                        <span class="thumb"><?php echo icon('package'); ?></span>
+                        <div class="grow">
+                            <strong><a href="update_product.php?id=<?php echo (int) $item['id']; ?>"><?php echo e($item['product_name']); ?></a></strong>
+                            <span><?php echo e(ucfirst($item['category'])); ?> · <?php echo (int) $item['stock']; ?> in stock</span>
+                        </div>
+                        <span class="badge badge-<?php echo $level; ?>"><?php echo level_label($level); ?></span>
+                        <time datetime="<?php echo e($item['last_updated']); ?>" title="<?php echo e($item['last_updated']); ?>"><?php echo e(time_ago($item['last_updated'])); ?></time>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
 
-<script>
-function createMiniChart(canvasId, data, color, prefix = '') {
-    const { max, min } = findMinMax(data);
-    const stepSize = calculateStepSize(min, max);
-    
-    new Chart(document.getElementById(canvasId), {
-        type: 'line',
-        data: {
-            labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-            datasets: [{
-                data: data,
-                borderColor: color,
-                borderWidth: 2,
-                fill: true,
-                backgroundColor: `${color}10`,
-                tension: 0.4,
-                pointRadius: 3,
-                pointBackgroundColor: color
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: { 
-                    display: true,
-                    grid: {
-                        display: true,
-                        color: '#f0f0f0',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        display: true,
-                        font: {
-                            size: 10
-                        },
-                        color: '#666'
-                    }
-                },
-                y: { 
-                    display: true,
-                    grid: {
-                        display: true,
-                        color: '#f0f0f0',
-                        drawBorder: false
-                    },
-                    ticks: {
-                        display: true,
-                        font: {
-                            size: 10
-                        },
-                        color: '#666',
-                        callback: function(value) {
-                            if (value >= 1000) {
-                                return prefix + (value/1000) + 'k';
-                            }
-                            return prefix + value;
-                        },
-                        stepSize: stepSize
-                    },
-                    min: min - (max - min) * 0.1,
-                    max: max + (max - min) * 0.1
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    enabled: true,
-                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                    titleColor: '#333',
-                    bodyColor: '#333',
-                    borderColor: '#ddd',
-                    borderWidth: 1,
-                    padding: 10,
-                    displayColors: false,
-                    callbacks: {
-                        label: (context) => {
-                            return prefix + context.raw.toLocaleString();
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
+    <section class="card" aria-labelledby="lowTitle">
+        <div class="card-head">
+            <div>
+                <h2 id="lowTitle">Low stock alerts</h2>
+                <p>At or below <?php echo LOW_STOCK_THRESHOLD; ?> units, or marked low/out</p>
+            </div>
+            <a href="inventory.php?status=attention" class="link-more">View all <?php echo icon('arrow-right'); ?></a>
+        </div>
+        <?php if (!$attention): ?>
+            <div class="empty empty-sm">
+                <span class="empty-icon"><?php echo icon('package-check'); ?></span>
+                <h3>All stocked up</h3>
+                <p>No products are running low right now.</p>
+            </div>
+        <?php else: ?>
+            <ul class="rows">
+                <?php foreach ($attention as $item):
+                    $stock = (int) $item['stock'];
+                    $level = stock_level($stock, $item['status']);
+                    $fill = min(100, $stock / max(LOW_STOCK_THRESHOLD, 1) * 100); ?>
+                    <li class="row-item">
+                        <div class="grow">
+                            <strong><a href="update_product.php?id=<?php echo (int) $item['id']; ?>"><?php echo e($item['product_name']); ?></a></strong>
+                            <span><?php echo e(ucfirst($item['category'])); ?></span>
+                        </div>
+                        <span class="meter" title="<?php echo $stock; ?> of <?php echo LOW_STOCK_THRESHOLD; ?>"><span style="width: <?php echo $fill; ?>%; background: <?php echo $level === 'out' ? 'var(--danger-mark)' : 'var(--warn-mark)'; ?>"></span></span>
+                        <span class="badge badge-<?php echo $level; ?>"><?php echo $stock; ?> left</span>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+</div>
 
-// Helper function to find min and max values
-function findMinMax(data) {
-    return {
-        max: Math.max(...data),
-        min: Math.min(...data)
-    };
-}
+<section class="card" aria-labelledby="salesTitle">
+    <div class="card-head">
+        <div>
+            <h2 id="salesTitle">Sales &amp; revenue</h2>
+            <p>Revenue, orders and average order value</p>
+        </div>
+        <span class="placeholder-tag"><?php echo icon('info', 'icon-sm'); ?> Not set up</span>
+    </div>
+    <div class="empty empty-sm">
+        <span class="empty-icon"><?php echo icon('bar-chart-3'); ?></span>
+        <h3>Sales tracking isn't set up yet</h3>
+        <p>Checkout totals aren't saved to the database yet, so there's no real revenue or order history to chart. This section will fill in once sales are recorded.</p>
+        <a href="Checkout.php" class="btn btn-secondary btn-sm"><?php echo icon('scan-barcode', 'icon-sm'); ?> Open checkout</a>
+    </div>
+</section>
 
-// Helper function to calculate appropriate step size for y-axis
-function calculateStepSize(min, max) {
-    const range = max - min;
-    const targetSteps = 4; // We want about 4-5 steps on the y-axis
-    const roughStepSize = range / targetSteps;
-    
-    // Round to a nice number
-    const magnitude = Math.pow(10, Math.floor(Math.log10(roughStepSize)));
-    const normalizedStepSize = roughStepSize / magnitude;
-    
-    let niceStepSize;
-    if (normalizedStepSize < 1.5) niceStepSize = 1;
-    else if (normalizedStepSize < 3) niceStepSize = 2;
-    else if (normalizedStepSize < 7) niceStepSize = 5;
-    else niceStepSize = 10;
-    
-    return niceStepSize * magnitude;
-}
-
-// Create the mini charts with the enhanced styling
-createMiniChart("revenueChart", [12000, 13500, 11000, 15000, 14500, 15500, 16000], "#4169E1", "$");
-createMiniChart("ordersChart", [280, 290, 270, 300, 310, 320, 330], "#2E8B57");
-createMiniChart("aovChart", [42, 45, 41, 48, 47, 49, 50], "#CD5C5C", "$");
-</script>
-
-<script>
-    let timeout;
-    let countdown;
-    const sessionTimeout = 900; // Session timeout in seconds
-    const warningTime = 10; // Time to show warning before timeout (in seconds)
-
-    function startTimer() {
-        clearTimeout(timeout);
-        timeout = setTimeout(logout, sessionTimeout * 1000);
-    }
-
-    function resetTimer() {
-        clearTimeout(timeout);
-        startTimer();
-        hideModal();
-    }
-
-    function logout() {
-        window.location.href = <?php echo json_encode(logout_url()); ?>;
-    }
-
-    function showModal() {
-        const modal = document.getElementById('sessionTimeoutModal');
-        modal.style.display = 'flex';
-        startCountdown(warningTime);
-    }
-
-    function hideModal() {
-        const modal = document.getElementById('sessionTimeoutModal');
-        modal.style.display = 'none';
-        clearInterval(countdown);
-    }
-
-    function startCountdown(seconds) {
-        let remainingTime = seconds;
-        const countdownElement = document.getElementById('countdown');
-        countdownElement.textContent = remainingTime;
-
-        countdown = setInterval(() => {
-            remainingTime--;
-            countdownElement.textContent = remainingTime;
-
-            if (remainingTime <= 0) {
-                clearInterval(countdown);
-                logout();
-            }
-        }, 1000);
-    }
-
-    // Event listeners for user activity
-    document.addEventListener('mousemove', resetTimer);
-    document.addEventListener('keypress', resetTimer);
-    document.addEventListener('click', resetTimer);
-
-    // Start the timer when the page loads
-    startTimer();
-
-    // Show the modal when the session is about to expire
-    setTimeout(showModal, (sessionTimeout - warningTime) * 1000);
-</script>
-
-
-</body>
-</html>
+<?php layout_end(); ?>

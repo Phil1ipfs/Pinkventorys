@@ -1,158 +1,115 @@
 <?php
 require_once 'bootstrap.php';
+require_once 'layout.php';
 require_admin();
 
-$users = $conn->query("SELECT id, email, fullname, gender FROM users ORDER BY id");
+$users = $conn->query("SELECT id, email, fullname, gender FROM users ORDER BY id")->fetch_all(MYSQLI_ASSOC);
+$adminCount = (int) $conn->query("SELECT COUNT(*) FROM admin")->fetch_row()[0];
+$productCount = (int) $conn->query("SELECT COUNT(*) FROM inventory")->fetch_row()[0];
+
+layout_start('Users', 'users');
 ?>
 
+<div class="page-head">
+    <div>
+        <h1>Users</h1>
+        <p>Manage the people who can sign in to your store.</p>
+    </div>
+    <div class="page-actions">
+        <a href="Admin.php" class="btn btn-secondary"><?php echo icon('shield-check'); ?> Add admin</a>
+        <a href="add_user.php" class="btn btn-primary"><?php echo icon('user-plus'); ?> Add user</a>
+    </div>
+</div>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<section class="stats stats-3" aria-label="Account summary">
+    <div class="card stat">
+        <div class="stat-top">Registered users <span class="stat-icon"><?php echo icon('users'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format(count($users)); ?></div>
+        <div class="stat-meta">Can use the store dashboard</div>
+    </div>
+    <div class="card stat">
+        <div class="stat-top">Administrators <span class="stat-icon is-info"><?php echo icon('shield-check'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format($adminCount); ?></div>
+        <div class="stat-meta">Can manage users and admins</div>
+    </div>
+    <a href="inventory.php" class="card stat">
+        <div class="stat-top">Products <span class="stat-icon is-ok"><?php echo icon('package'); ?></span></div>
+        <div class="stat-value num"><?php echo number_format($productCount); ?></div>
+        <div class="stat-meta">In your inventory</div>
+    </a>
+</section>
 
-    <title>Pinkventory</title>
-    <link rel="stylesheet" type="text/css" href="<?php echo asset('styles.css'); ?>">
-</head>
-
-<body>
-    <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <h2 class="logo">Pinkventory</h2>
-            <nav>
-                <ul>
-                    <li class="active">
-                        <a href="admin_dashboard.php"><i class="nav-icon">🏠</i> Home</a>
-                    </li>
-                    <li>
-                        <a href="Admin.php"><i class="nav-icon">🛡️</i> Create Admin</a>
-                    </li>
-                    <li>
-                        <a href="#"><i class="nav-icon">⚙️</i> Settings</a>
-                    </li>
-                    <li>
-                        <a href="<?php echo e(logout_url()); ?>"><i class="nav-icon">🚪</i> Logout</a>
-                    </li>
-
-                </ul>
-            </nav>
+<section class="card" aria-labelledby="usersTitle">
+    <div class="toolbar">
+        <h2 id="usersTitle" class="sr-only">All users</h2>
+        <div class="search">
+            <?php echo icon('search', 'icon-sm'); ?>
+            <label for="userFilter" class="sr-only">Filter users by name or email</label>
+            <input type="search" id="userFilter" class="input" placeholder="Filter by name or email…" <?php echo $users ? '' : 'disabled'; ?>>
         </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <h2>Welcome <?php echo e($_SESSION['admin_username']); ?>!</h2>
-            <h1>Dashboard Overview</h1>
-            <a href="add_user.php" class="btn-add">ADD USER</a>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Email</th>
-                            <th>Username</th>
-                            <th>Gender</th>
-                            <th colspan="2">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php while ($row = $users->fetch_assoc()): ?>
-                        <tr>
-                            <td><?php echo (int) $row['id']; ?></td>
-                            <td><?php echo e($row['email']); ?></td>
-                            <td><?php echo e($row['fullname']); ?></td>
-                            <td><?php echo e($row['gender']); ?></td>
-                            <td><a href="update_user.php?id=<?php echo (int) $row['id']; ?>" class="btn update">Update</a></td>
-                            <td><button class="btn delete" onclick="deleteUser(<?php echo (int) $row['id']; ?>)">Delete</button></td>
-                        </tr>
-                    <?php endwhile; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <span class="muted" id="userCount" aria-live="polite"><?php echo count($users); ?> <?php echo count($users) === 1 ? 'user' : 'users'; ?></span>
     </div>
 
-    <script>
-  const csrfToken = <?php echo json_encode(csrf_token()); ?>;
-  const logoutUrl = <?php echo json_encode(logout_url()); ?>;
+    <?php if (!$users): ?>
+        <div class="empty">
+            <span class="empty-icon"><?php echo icon('users'); ?></span>
+            <h3>No users yet</h3>
+            <p>Users can sign up from the login page, or you can add them yourself.</p>
+            <a href="add_user.php" class="btn btn-primary"><?php echo icon('user-plus'); ?> Add the first user</a>
+        </div>
+    <?php else: ?>
+        <div class="table-wrap">
+            <table class="table table-cards" id="usersTable">
+                <thead>
+                    <tr>
+                        <th scope="col">User</th>
+                        <th scope="col">Gender</th>
+                        <th scope="col">ID</th>
+                        <th scope="col" class="actions"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $row): ?>
+                        <tr data-search="<?php echo e(mb_strtolower($row['fullname'] . ' ' . $row['email'])); ?>">
+                            <td class="cell-first">
+                                <div class="cell-main">
+                                    <span class="avatar avatar-lg"><?php echo e(initials($row['fullname'])); ?></span>
+                                    <div>
+                                        <strong><?php echo e($row['fullname']); ?></strong>
+                                        <span><?php echo e($row['email']); ?></span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td data-label="Gender">
+                                <?php if ($row['gender']): ?>
+                                    <span class="badge badge-neutral badge-plain"><?php echo e($row['gender']); ?></span>
+                                <?php else: ?>
+                                    <span class="muted">—</span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="ID" class="muted num">#<?php echo (int) $row['id']; ?></td>
+                            <td class="actions">
+                                <div class="actions-inner">
+                                    <a href="update_user.php?id=<?php echo (int) $row['id']; ?>" class="btn btn-secondary btn-sm" aria-label="Edit <?php echo e($row['fullname']); ?>">
+                                        <?php echo icon('pencil', 'icon-sm'); ?><span class="label-sm">Edit</span>
+                                    </a>
+                                    <button type="button" class="btn btn-danger-soft btn-sm" data-delete-user="<?php echo (int) $row['id']; ?>"
+                                            data-name="<?php echo e($row['fullname']); ?>" aria-label="Delete <?php echo e($row['fullname']); ?>">
+                                        <?php echo icon('trash-2', 'icon-sm'); ?><span class="label-sm">Delete</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="empty empty-sm" id="noUserMatches" hidden>
+            <span class="empty-icon"><?php echo icon('search'); ?></span>
+            <h3>No users match</h3>
+            <p>Try a different name or email address.</p>
+        </div>
+    <?php endif; ?>
+</section>
 
-  function deleteUser(userId) {
-    if (confirm("Are you sure you want to delete this user?")) {
-      // Send an AJAX request to delete_user.php with the user ID
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", "delete_user.php", true);
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          alert("User deleted successfully");
-          window.location.reload(); // Reload the page to update the list
-        } else {
-          alert("Error deleting user");
-        }
-      };
-      xhr.send("id=" + encodeURIComponent(userId) + "&csrf_token=" + encodeURIComponent(csrfToken));
-    }
-  }
-</script>
-
-    <!-- Inactivity Warning Dialog -->
-    <div id="inactivityWarning" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); z-index: 1000; text-align: center;">
-        <p>You have been inactive for a while. You will be logged out in <span id="countdown">5</span> seconds.</p>
-    </div>
-
-    <script>
-        // Inactivity timeout: 3 minutes (180,000 milliseconds)
-        const inactivityTimeout = 180000;
-        const countdownDuration = 5; // Countdown duration in seconds
-        let inactivityTimer;
-        let countdownTimer;
-
-        // Function to reset the inactivity timer
-        function resetInactivityTimer() {
-            clearTimeout(inactivityTimer);
-            clearInterval(countdownTimer);
-            document.getElementById('inactivityWarning').style.display = 'none';
-            inactivityTimer = setTimeout(showInactivityWarning, inactivityTimeout);
-        }
-
-        // Function to show the inactivity warning dialog and start countdown
-        function showInactivityWarning() {
-            document.getElementById('inactivityWarning').style.display = 'block';
-            startCountdown();
-        }
-
-        // Function to start the countdown
-        function startCountdown() {
-            let timeLeft = countdownDuration;
-            document.getElementById('countdown').textContent = timeLeft;
-
-            countdownTimer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('countdown').textContent = timeLeft;
-
-                if (timeLeft <= 0) {
-                    clearInterval(countdownTimer);
-                    logoutUser();
-                }
-            }, 1000);
-        }
-
-        // Function to log out the user
-        function logoutUser() {
-            window.location.href = logoutUrl;
-        }
-
-        // Reset the timer on user activity (e.g., mouse movement, clicks, keypress)
-        document.addEventListener('mousemove', resetInactivityTimer);
-        document.addEventListener('keydown', resetInactivityTimer);
-        document.addEventListener('click', resetInactivityTimer);
-
-        // Initialize the inactivity timer when the page loads
-        resetInactivityTimer();
-    </script>
-
-
-</body>
-
-</html>
+<?php layout_end(['users.js']); ?>
